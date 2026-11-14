@@ -20,6 +20,8 @@ import deportesDeConjunto.ResultadoPorPuntos;
 import enumeraciones.EstadoTorneo;
 import enumeraciones.TipoTorneo;
 import inscripciones.InscripcionEquipo;
+import club.ClubDeportivoSeneca;
+import usuarios.Administrador;
 import usuarios.Socio;
 
 /**
@@ -29,6 +31,8 @@ import usuarios.Socio;
 public class TorneoEquipoTest {
 
 	private LocalDate fechaInicio;
+	private ClubDeportivoSeneca club;
+	private Administrador admin;
 	private TorneoEquipo torneo;
 	private EquipoBaloncesto halcones;
 	private EquipoBaloncesto tigres;
@@ -40,6 +44,9 @@ public class TorneoEquipoTest {
 				TipoTorneo.RECREATIVO, fechaInicio, 0, 30000);
 		halcones = crearEquipo("Halcones");
 		tigres = crearEquipo("Tigres");
+		club = new ClubDeportivoSeneca();
+		admin = club.getAdministrador();
+		club.agregarTorneo(torneo);
 	}
 
 	/** Equipo de baloncesto MAYORES con 5 jugadores habilitados (minimo para registrar resultados). */
@@ -171,7 +178,60 @@ public class TorneoEquipoTest {
 		assertThrows(IllegalStateException.class, () -> torneo.registrarResultado(partido, new ResultadoPorPuntos(80, 70)));
 	}
 
+	@Test
+	public void testConsultarEstadoPorIdMuestraNombreYEstado() {
+		assertEquals(EstadoTorneo.EN_CURSO, admin.consultarEstadoTorneo("E1"));
+		assertEquals("Liga Baloncesto", club.buscarTorneo("E1").getNombre());
+		assertEquals(torneo, club.buscarTorneo("e1"));
+	}
+
+	@Test
+	public void testConsultarEstadoPorIdDeTorneoFinalizado() {
+		torneo.setFechaInicio(LocalDate.now());
+		admin.finalizarTorneo("E1");
+		assertEquals(EstadoTorneo.FINALIZADO, admin.consultarEstadoTorneo("E1"));
+	}
+
+	@Test
+	public void testConsultarEstadoDeTorneoInexistenteFalla() {
+		IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+				() -> admin.consultarEstadoTorneo("NO-EXISTE"));
+		assertTrue(e.getMessage().contains("NO-EXISTE"));
+		assertThrows(IllegalArgumentException.class, () -> admin.consultarEstadoTorneo(null));
+		assertEquals(null, club.buscarTorneo("NO-EXISTE"));
+	}
+
 	// ======================= HU-A03: Consultar historial =======================
+
+	@Test
+	public void testConsultarHistorialPorIdDeTorneoExistente() {
+		torneo.inscribir(halcones);
+		torneo.inscribir(tigres);
+		String historial = admin.consultarHistorialTorneo("E1");
+		assertEquals(torneo.consultarHistorial(), historial);
+		assertTrue(historial.contains("Liga Baloncesto"));
+		assertTrue(historial.contains("Participantes:"));
+		assertTrue(historial.contains("Encuentros:"));
+		assertTrue(historial.contains("Posiciones:"));
+	}
+
+	@Test
+	public void testConsultarHistorialPorIdDeTorneoFinalizado() {
+		torneo.inscribir(halcones);
+		torneo.setFechaInicio(LocalDate.now());
+		admin.finalizarTorneo("E1");
+		String historial = admin.consultarHistorialTorneo("E1");
+		assertTrue(historial.contains("FINALIZADO"));
+		assertTrue(historial.contains("Premio:"));
+	}
+
+	@Test
+	public void testConsultarHistorialDeTorneoInexistenteFalla() {
+		IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+				() -> admin.consultarHistorialTorneo("NO-EXISTE"));
+		assertTrue(e.getMessage().contains("NO-EXISTE"));
+		assertThrows(IllegalArgumentException.class, () -> admin.consultarHistorialTorneo(null));
+	}
 
 	@Test
 	public void testHistorialTorneoSinParticipantes() {

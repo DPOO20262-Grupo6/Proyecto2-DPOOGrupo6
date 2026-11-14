@@ -23,11 +23,15 @@ import estadisticas.EstadisticasPartidoIndividual;
 import estadisticas.EstadisticasPartidoTenis;
 import inscripciones.InscripcionDisciplinaIndividual;
 import instalaciones.CanchaTenis;
+import club.ClubDeportivoSeneca;
+import usuarios.Administrador;
 import usuarios.Socio;
 
 public class TorneoIndividualTest {
 
 	private LocalDate fechaInicio;
+	private ClubDeportivoSeneca club;
+	private Administrador admin;
 	private TorneoIndividual torneo;
 	private CanchaTenis cancha;
 	private InscripcionDisciplinaIndividual ana;
@@ -41,6 +45,9 @@ public class TorneoIndividualTest {
 		cancha = new CanchaTenis("Cancha 1");
 		ana = crearJugador("Ana", "TENIS");
 		beto = crearJugador("Beto", "TENIS");
+		club = new ClubDeportivoSeneca();
+		admin = club.getAdministrador();
+		club.agregarTorneo(torneo);
 	}
 
 	private InscripcionDisciplinaIndividual crearJugador(String nombre, String disciplina) {
@@ -189,6 +196,59 @@ public class TorneoIndividualTest {
 		jugadores.add(beto);
 		assertThrows(IllegalStateException.class, () -> torneo.programarPartido(jugadores,
 				LocalDate.now().plusDays(1), LocalTime.of(8, 0), LocalTime.of(10, 0), cancha));
+	}
+
+	@Test
+	public void testConsultarEstadoPorIdMuestraNombreYEstado() {
+		assertEquals(EstadoTorneo.EN_CURSO, admin.consultarEstadoTorneo("T1"));
+		assertEquals("Copa Tenis", club.buscarTorneo("T1").getNombre());
+		assertEquals(torneo, club.buscarTorneo("t1"));
+	}
+
+	@Test
+	public void testConsultarEstadoPorIdDeTorneoFinalizado() {
+		torneo.setFechaInicio(LocalDate.now());
+		admin.finalizarTorneo("T1");
+		assertEquals(EstadoTorneo.FINALIZADO, admin.consultarEstadoTorneo("T1"));
+	}
+
+	@Test
+	public void testConsultarEstadoDeTorneoInexistenteFalla() {
+		IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+				() -> admin.consultarEstadoTorneo("NO-EXISTE"));
+		assertTrue(e.getMessage().contains("NO-EXISTE"));
+		assertThrows(IllegalArgumentException.class, () -> admin.consultarEstadoTorneo(null));
+		assertEquals(null, club.buscarTorneo("NO-EXISTE"));
+	}
+
+	@Test
+	public void testConsultarHistorialPorIdDeTorneoExistente() {
+		torneo.inscribir(ana);
+		torneo.inscribir(beto);
+		String historial = admin.consultarHistorialTorneo("T1");
+		assertEquals(torneo.consultarHistorial(), historial);
+		assertTrue(historial.contains("Copa Tenis"));
+		assertTrue(historial.contains("Participantes:"));
+		assertTrue(historial.contains("Encuentros:"));
+		assertTrue(historial.contains("Posiciones:"));
+	}
+
+	@Test
+	public void testConsultarHistorialPorIdDeTorneoFinalizado() {
+		torneo.inscribir(ana);
+		torneo.setFechaInicio(LocalDate.now());
+		admin.finalizarTorneo("T1");
+		String historial = admin.consultarHistorialTorneo("T1");
+		assertTrue(historial.contains("FINALIZADO"));
+		assertTrue(historial.contains("Premio:"));
+	}
+
+	@Test
+	public void testConsultarHistorialDeTorneoInexistenteFalla() {
+		IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+				() -> admin.consultarHistorialTorneo("NO-EXISTE"));
+		assertTrue(e.getMessage().contains("NO-EXISTE"));
+		assertThrows(IllegalArgumentException.class, () -> admin.consultarHistorialTorneo(null));
 	}
 
 	@Test
