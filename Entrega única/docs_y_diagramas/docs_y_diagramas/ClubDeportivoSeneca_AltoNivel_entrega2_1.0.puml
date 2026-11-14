@@ -1,0 +1,519 @@
+@startuml ClubDeportivoSeneca_AltoNivel
+' Si tu visor dibuja distinto la distribución, quita el apóstrofe de la siguiente línea:
+' !pragma layout smetana
+' Evita que el PNG se recorte: si el diagrama es más ancho que el límite, se reduce para que quepa
+scale max 4000 width
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam nodesep 45
+skinparam ranksep 70
+' Diagrama de alto nivel: se ocultan atributos y métodos
+hide members
+
+' =====================================================
+' CLASE RAÍZ: unifica todo el sistema
+' =====================================================
+class ClubDeportivoSeneca
+
+
+' =====================================================
+' BLOQUE 1: USUARIOS
+' =====================================================
+package "Usuarios" {
+  abstract class Usuario {
+    -login
+    -password
+    -nombre
+  }
+
+  class Socio {
+    -fechaNacimiento
+    -puntosDeFidelidad
+  }
+
+  abstract class EmpleadoDelClub {
+    -codigoDescuento
+    -puntosDeFidelidad
+  }
+
+  class Entrenador
+  class Fisioterapeuta
+  class Administrador
+
+  Usuario <|-- Socio
+  Usuario <|-- EmpleadoDelClub
+  Usuario <|-- Administrador
+  EmpleadoDelClub <|-- Entrenador
+  EmpleadoDelClub <|-- Fisioterapeuta
+}
+
+' =====================================================
+' BLOQUE 2: INSCRIPCIONES (clases de asociación)
+' =====================================================
+package "Inscripciones" {
+  class InscripcionEquipo {
+    -posicion
+    -numeroCamiseta
+  }
+
+  class InscripcionEquipoFutbol {
+    -/tarjetasAmarillasAcumuladasInterno
+    -/suspendidoInterno
+  }
+
+  class InscripcionDisciplinaIndividual {
+    -disciplina
+    -nivel
+    -rankingElo
+  }
+
+  InscripcionEquipo <|-- InscripcionEquipoFutbol
+}
+
+Socio "1" -- "0..*" InscripcionEquipo : realiza >
+Socio "1" -- "0..*" InscripcionDisciplinaIndividual : realiza >
+
+' =====================================================
+' BLOQUE 3: DEPORTES DE CONJUNTO Y COMPETENCIAS
+' =====================================================
+package "DeportesDeConjunto" {
+  abstract class Equipo {
+    -categoria
+    -nombre
+    -cupoMaximoJugadores
+  }
+
+  class EquipoFutbol {
+    -minimoJugadoresHabilitados = 7
+    -DEPORTE = "FUTBOL"
+  }
+  class EquipoBaloncesto {
+    -minimoJugadoresHabilitados = 5
+    -DEPORTE = "BALONCESTO"
+  }
+  class EquipoVoleibol {
+    -minimoJugadoresHabilitados = 6
+    -DEPORTE = "VOLEIBOL"
+  }
+
+  Equipo <|-- EquipoFutbol
+  Equipo <|-- EquipoBaloncesto
+  Equipo <|-- EquipoVoleibol
+
+  abstract class Competencia {
+    -nombre
+    -entidadOrganizadora
+    -añoTemporada
+    -deporte
+    -categoriaHabilitada
+    -jugadoresMinimosNomina
+  }
+
+  class TorneoDeLosCerros
+  class Ascun {
+    -faseActual
+  }
+
+  Competencia <|-- TorneoDeLosCerros
+  Competencia <|-- Ascun
+
+  class FormatoLiga {
+    -tablaDePosiciones
+  }
+  class FaseEliminacionDirecta
+
+  class NominaCompetencia {
+    -fechaInscripcion
+    -puntosAcumulados
+    -partidosGanados
+  }
+  class JugadorEnNomina
+  class JugadorEnNominaFutbol {
+    -/tarjetasAmarillasAcumuladasCompetencia
+    -/suspendidoCompetencia
+  }
+  JugadorEnNomina <|-- JugadorEnNominaFutbol
+
+  abstract class PartidoDeEquipo {
+    -fecha
+    -deporte
+  }
+  class PartidoInterno
+  class PartidoDeCompetencia {
+    -institucionRival
+    -escenario
+    -esLocal
+  }
+  PartidoDeEquipo <|-- PartidoInterno
+  PartidoDeEquipo <|-- PartidoDeCompetencia
+
+  abstract class ResultadoPartidoEquipo
+class ResultadoPorPuntos {
+  -puntosLocal
+  -puntosVisitante
+}
+class ResultadoVoleibol {
+  -/setsGanadosLocal
+  -/setsGanadosVisitante
+}
+class SetVoleibol {
+  -numeroSet
+  -puntosLocal
+  -puntosVisitante
+}
+ResultadoPartidoEquipo <|-- ResultadoPorPuntos
+ResultadoPartidoEquipo <|-- ResultadoVoleibol
+
+
+PartidoDeEquipo "1" *-- "0..1" ResultadoPartidoEquipo : registra >
+ResultadoVoleibol "1" *-- "3..5" SetVoleibol : se compone de > 
+  
+}
+
+' -- Relaciones del bloque 3 --
+Equipo "1" -- "0..*" InscripcionEquipo : pertenece a <
+' NominaCompetencia: una por cada par (Equipo, Competencia)
+Equipo "0..*" -- "0..*" Competencia : participa en >
+(Equipo, Competencia) .. NominaCompetencia
+
+' JugadorEnNomina: una por cada par (NominaCompetencia, InscripcionEquipo)
+NominaCompetencia "0..*" -- "1..*" InscripcionEquipo : habilita >
+(NominaCompetencia, InscripcionEquipo) .. JugadorEnNomina
+
+
+
+TorneoDeLosCerros "0..1" -- "1" FormatoLiga : se juega con >
+Ascun "0..1" -- "0..*" FormatoLiga : agrupa >
+Ascun "1" -- "0..*" FaseEliminacionDirecta : define >
+FormatoLiga "0..1" -- "0..*" PartidoDeCompetencia : programa >
+FaseEliminacionDirecta "0..1" -- "0..*" PartidoDeCompetencia : programa >
+FormatoLiga "1" -- "0..*" NominaCompetencia : compite en <
+
+Equipo "1" -- "0..*" PartidoInterno : es local en >
+Equipo "1" -- "0..*" PartidoInterno : es visitante en >
+
+Equipo "1" -- "0..*" PartidoDeCompetencia : disputa >
+
+' =====================================================
+' BLOQUE 4: ESTADISTICAS
+' =====================================================
+package "Estadisticas" {
+  abstract class EstadisticasPartidoDeEquipo
+  class EstadisticasPartidoFutbol {
+    -goles
+    -asistencias
+
+  }
+  class EstadisticasPartidoBaloncesto {
+    -puntos
+    -rebotes
+  }
+  class EstadisticasPartidoVoleibol {
+    -aces
+    -bloqueos
+  }
+  EstadisticasPartidoDeEquipo <|-- EstadisticasPartidoFutbol
+  EstadisticasPartidoDeEquipo <|-- EstadisticasPartidoBaloncesto
+  EstadisticasPartidoDeEquipo <|-- EstadisticasPartidoVoleibol
+
+  abstract class EstadisticasPartidoIndividual
+  class EstadisticasPartidoTenis {
+    -setsGanados
+    -gamesGanados
+    -aces
+    -erroresNoForzados
+  }
+  class EstadisticasPartidoPadel {
+    -setsGanados
+    -gamesGanados
+    -aces
+    -erroresNoForzados
+  }
+  class EstadisticasPartidoTenisDeMesa {
+    -setsGanados
+    -puntosTotales
+  }
+
+
+class Tarjeta {
+  -tipo : TipoTarjeta
+  -minuto
+}
+class Suspension {
+  -motivo : MotivoSuspension
+  -cumplida
+}
+
+EstadisticasPartidoFutbol "1" *-- "0..*" Tarjeta : recibe >
+Tarjeta "1..2" -- "0..1" Suspension : origina >
+Suspension "0..*" -- "0..1" PartidoDeEquipo : se cumple en >
+InscripcionEquipoFutbol "0..1" -- "0..*" Suspension : acumula (interno) >
+JugadorEnNominaFutbol "0..1" -- "0..*" Suspension : acumula (competencia) >
+
+
+  EstadisticasPartidoIndividual <|-- EstadisticasPartidoTenis
+  EstadisticasPartidoIndividual <|-- EstadisticasPartidoPadel
+  EstadisticasPartidoIndividual <|-- EstadisticasPartidoTenisDeMesa
+}
+
+PartidoDeEquipo "0..*" -- "5..*" InscripcionEquipo : participa en <
+(PartidoDeEquipo, InscripcionEquipo) .. EstadisticasPartidoDeEquipo
+
+
+
+' =====================================================
+' BLOQUE 5: INSTALACIONES Y DEPORTES INDIVIDUALES
+' =====================================================
+package "Instalaciones" {
+  abstract class InstalacionDeportiva {
+    -nombre
+  }
+  abstract class CanchaDeporteIndividual {
+    -capacidad
+  }
+  class CanchaTenis
+  class CanchaPadel {
+    -techada
+    -capacidad = 4
+  }
+  class CanchaTenisDeMesa {
+    -techada
+  }
+  class InstalacionDeporteConjunto
+
+  InstalacionDeportiva <|-- CanchaDeporteIndividual
+  InstalacionDeportiva <|-- InstalacionDeporteConjunto
+  CanchaDeporteIndividual <|-- CanchaTenis
+  CanchaDeporteIndividual <|-- CanchaPadel
+  CanchaDeporteIndividual <|-- CanchaTenisDeMesa
+}
+
+package "DeportesIndividuales" {
+  abstract class PartidoDeporteIndividual {
+    -fecha
+    -horaInicio
+    -horaFin
+    -modalidad
+  }
+  class PartidoTenis
+  class PartidoPadel
+  class PartidoTenisDeMesa
+  PartidoDeporteIndividual <|-- PartidoTenis
+  PartidoDeporteIndividual <|-- PartidoPadel
+  PartidoDeporteIndividual <|-- PartidoTenisDeMesa
+
+  class ReservaInstalacionDeporteIndividual {
+    -fecha
+    -horaInicio
+    -horaFin
+    -cantidadJugadores
+    -modalidad
+    -estado
+  }
+}
+
+PartidoDeporteIndividual "0..*" -- "1" CanchaDeporteIndividual : se juega en >
+InscripcionDisciplinaIndividual "2..4" -- "0..*" PartidoDeporteIndividual : participa en >
+(PartidoDeporteIndividual, InscripcionDisciplinaIndividual) .. EstadisticasPartidoIndividual
+
+ReservaInstalacionDeporteIndividual "0..*" -- "1" CanchaDeporteIndividual : aparta >
+Socio "1..*" -- "0..*" ReservaInstalacionDeporteIndividual : solicita >
+
+' =====================================================
+' BLOQUE 6: ENTRENAMIENTO
+' =====================================================
+package "Entrenamiento" {
+  class SesionDeEntrenamiento {
+    -fecha
+    -hora
+    -duracion
+  }
+  class RegistroAsistencia {
+    -estadoAsistencia
+    -notaDesempeño
+    -comentario
+  }
+}
+
+Entrenador "1" -- "0..*" SesionDeEntrenamiento : planea >
+Socio "1..*" -- "0..*" SesionDeEntrenamiento : convoca <
+(SesionDeEntrenamiento, Socio) .. RegistroAsistencia
+SesionDeEntrenamiento "0..*" -- "1" InstalacionDeportiva : se realiza en >
+
+' =====================================================
+' BLOQUE 7: ARTICULOS, TIENDA, CAFETERIA E INVENTARIO
+' =====================================================
+package "ArticulosYVentas" {
+  abstract class Articulo {
+    -nombre
+    -precio
+  }
+  class ArticuloDeportivo {
+    -categoria
+  }
+  class Bebida {
+    -tipo
+  }
+  class Snack {
+    -alergenos
+  }
+  Articulo <|-- ArticuloDeportivo
+  Articulo <|-- Bebida
+  Articulo <|-- Snack
+
+  class TiendaDeportiva
+  class Cafeteria
+
+  abstract class Venta {
+    -fecha
+    -valorTotal
+    -descuentoAplicado
+    -puntosFidelidadGenerados
+    -puntosFidelidadUtilizados
+  }
+  class VentaTienda {
+    -iva = 19%
+  }
+  class VentaCafeteria {
+    -impuestoConsumo = 8%
+    -propinaSugerida = 10%
+  }
+  Venta <|-- VentaTienda
+  Venta <|-- VentaCafeteria
+
+  class DetalleVenta {
+    -cantidadArticulo
+    -precioUnitario
+  }
+}
+
+package "Inventario" {
+  class UbicacionInventario {
+    -nombre
+    -tipo
+  }
+  class RegistroInventario {
+    -cantidad
+  }
+}
+
+TiendaDeportiva "1" -- "0..*" ArticuloDeportivo : ofrece >
+Cafeteria "1" -- "0..*" Bebida : ofrece >
+Cafeteria "1" -- "0..*" Snack : ofrece >
+TiendaDeportiva "0..1" -- "0..*" Venta : registra >
+Cafeteria "0..1" -- "0..*" Venta : registra >
+
+Venta "0..*" -- "1..*" Articulo : incluye >
+(Venta, Articulo) .. DetalleVenta
+
+Usuario "1" -- "0..*" Venta : efectúa >
+
+Articulo "0..*" -- "0..*" UbicacionInventario : se almacena en >
+(Articulo, UbicacionInventario) .. RegistroInventario
+
+' =====================================================
+' BLOQUE 8: ADMINISTRACION
+' =====================================================
+package "Administracion" {
+  class TurnoEmpleado {
+    -fecha
+    -hora
+    -duracion
+  }
+  class SolicitudCambioTurnoEmpleado {
+    -estado
+    -fechaSolicitud
+  }
+  abstract class Sugerencia {
+    -nombrePropuesto
+    -precioPropuesto
+    -estado
+  }
+  class SugerenciaArticulo {
+    -categoriaPropuesta
+  }
+  class SugerenciaSnack {
+    -alergenosPropuestos
+  }
+  Sugerencia <|-- SugerenciaArticulo
+  Sugerencia <|-- SugerenciaSnack
+}
+
+Administrador "1" -- "0..*" TurnoEmpleado : asigna >
+Administrador "1" -- "0..*" Sugerencia : evalúa >
+EmpleadoDelClub "1" -- "0..*" Sugerencia : propone >
+TurnoEmpleado "0..*" -- "1" EmpleadoDelClub : cumple <
+SolicitudCambioTurnoEmpleado "0..*" -- "1" TurnoEmpleado : pide cambiar >
+
+' =====================================================
+' BLOQUE 9: TORNEOS INTERNOS (Proyecto 2)
+' =====================================================
+package "Torneos" {
+  abstract class Torneo {
+    -id
+    -nombre
+    -deporte
+    -categoria
+    -cuposTotales
+    -/cuposPreferenciales
+    -tipo : TipoTorneo
+    -estado : EstadoTorneo
+    -fechaInicio
+  }
+
+  class TorneoIndividual {
+    -modalidad
+  }
+
+  class TorneoEquipo
+
+  class PartidoTorneo
+
+  Torneo <|-- TorneoIndividual
+  Torneo <|-- TorneoEquipo
+}
+
+' PartidoTorneo es un tercer contexto de partido de equipo (junto a PartidoInterno y PartidoDeCompetencia)
+PartidoDeEquipo <|-- PartidoTorneo
+
+TorneoEquipo "1" *-- "0..*" PartidoTorneo : se compone de >
+' 0..1: un partido individual puede jugarse fuera de un torneo (partidos normales con reserva)
+TorneoIndividual "0..1" *-- "0..*" PartidoDeporteIndividual : se compone de >
+
+Equipo "1" -- "0..*" PartidoTorneo : es local en >
+Equipo "1" -- "0..*" PartidoTorneo : es visitante en >
+
+Administrador "1" -- "0..*" Torneo : organiza >
+
+' =====================================================
+' RELACIONES DE LA CLASE RAÍZ ClubDeportivoSeneca
+' =====================================================
+ClubDeportivoSeneca "1" *-- "1" Cafeteria : tiene >
+ClubDeportivoSeneca "1" *-- "1" TiendaDeportiva : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" InstalacionDeportiva : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" Socio : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" EmpleadoDelClub : tiene >
+ClubDeportivoSeneca "1" *-- "1" Administrador : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" Equipo : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" SesionDeEntrenamiento : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" ReservaInstalacionDeporteIndividual : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" Torneo : tiene >
+
+' =====================================================
+' LAYOUT: enlaces ocultos (solo acomodan el dibujo, no son relaciones del modelo)
+' =====================================================
+Fisioterapeuta -[hidden]down- Sugerencia
+Entrenador -[hidden]down- SesionDeEntrenamiento
+InscripcionEquipoFutbol -[hidden]down- EstadisticasPartidoDeEquipo
+PartidoDeEquipo -[hidden]down- EstadisticasPartidoDeEquipo
+InscripcionDisciplinaIndividual -[hidden]down- PartidoDeporteIndividual
+PartidoTenisDeMesa -[hidden]down- InstalacionDeportiva
+SugerenciaArticulo -[hidden]down- TiendaDeportiva
+SugerenciaSnack -[hidden]down- Cafeteria
+TurnoEmpleado -[hidden]down- TiendaDeportiva
+PartidoDeCompetencia -[hidden]down- EstadisticasPartidoDeEquipo
+NominaCompetencia -[hidden]down- EstadisticasPartidoIndividual
+PartidoInterno -[hidden]right- PartidoTorneo
+
+@enduml
