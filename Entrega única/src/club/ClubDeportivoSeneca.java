@@ -45,6 +45,10 @@ import usuarios.Usuario;
 public class ClubDeportivoSeneca implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
+
+	public static final String NOMBRE_ADMIN = "Administrador";
+	public static final String LOGIN_ADMIN = "admin";
+	public static final String PASSWORD_ADMIN = "admin123";
 	
 	private Map<String, Integer> maximoInstalacionesPorDisciplina;
 	private Administrador administrador;
@@ -80,7 +84,7 @@ public class ClubDeportivoSeneca implements Serializable {
 		this.inscripcionesIndividuales = new ArrayList<InscripcionDisciplinaIndividual>();
 		this.torneos = new ArrayList<Torneo>();
 
-		this.administrador = new Administrador("Administrador", "admin", "admin123", this);
+		this.administrador = new Administrador(NOMBRE_ADMIN, LOGIN_ADMIN, PASSWORD_ADMIN, this);
 		UbicacionInventario ubicacionTienda = new UbicacionInventario("Tienda Principal", "TIENDA");
 		this.bodegaCentral = new UbicacionInventario("Bodega", "BODEGA");
 		this.tienda = new TiendaDeportiva(ubicacionTienda);
