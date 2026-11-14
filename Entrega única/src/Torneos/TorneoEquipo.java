@@ -11,7 +11,6 @@ import enumeraciones.TipoTorneo;
 
 public class TorneoEquipo extends Torneo {
 
-	private static final long serialVersionUID = 1L;
 
 	private List<Equipo> equipos;
 	private List<PartidoTorneo> partidos;
@@ -25,7 +24,6 @@ public class TorneoEquipo extends Torneo {
 	// ---------------- Inscripcion (Integrante 2) ----------------
 
 	public boolean inscribir(Equipo equipo) {
-		// Version basica: el Integrante 2 completa las reglas de cupos preferenciales y pagos.
 		if (equipo == null || getEstado() != EstadoTorneo.EN_CURSO || haIniciado()) {
 			return false;
 		}
@@ -50,7 +48,6 @@ public class TorneoEquipo extends Torneo {
 		return equipo != null && equipos.contains(equipo);
 	}
 
-	// ---------------- Partidos (HU-A06) ----------------
 
 	public PartidoTorneo programarPartido(Equipo local, Equipo visitante, LocalDate fecha) {
 		if (getEstado() != EstadoTorneo.EN_CURSO) {
@@ -80,7 +77,6 @@ public class TorneoEquipo extends Torneo {
 		partido.registrarResultado(resultado);
 	}
 
-	// ---------------- Posiciones y ganador (HU-A03, HU-A05, HU-A06) ----------------
 
 	public List<Equipo> getEquiposOrdenados() {
 		List<Equipo> ordenados = new ArrayList<Equipo>(equipos);

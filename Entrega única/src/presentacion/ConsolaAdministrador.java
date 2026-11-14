@@ -12,10 +12,7 @@ import enumeraciones.TipoTorneo;
 import usuarios.Administrador;
 import usuarios.Usuario;
 
-/**
- * Consola del administrador para la gestion de torneos internos.
- * HU-A01 Crear torneo, HU-A02 Consultar estado, HU-A03 Consultar historial, HU-A04 Cupos preferenciales.
- */
+
 public class ConsolaAdministrador {
 
 	private static final String RUTA_DATOS = "./datos";
@@ -73,9 +70,7 @@ public class ConsolaAdministrador {
 		}
 	}
 
-	/**
-	 * Pide login y contrasena hasta que sean validos y pertenezcan al administrador del club.
-	 */
+
 	private void iniciarSesion() {
 		System.out.println("===== Inicio de sesion - Administrador =====");
 		while (administrador == null) {
@@ -110,7 +105,6 @@ public class ConsolaAdministrador {
 		System.out.print("Seleccione una opcion: ");
 	}
 
-	// ---------------- HU-A01: Crear torneo ----------------
 
 	private void crearTorneo() throws Exception {
 		System.out.println("--- Crear torneo ---");
@@ -191,7 +185,6 @@ public class ConsolaAdministrador {
 		System.out.println("  Cupos regulares: " + (torneo.getCuposTotales() - torneo.getCuposPreferenciales()));
 	}
 
-	// ---------------- HU-A02: Consultar estado ----------------
 
 	private void consultarEstado() {
 		System.out.println("--- Consultar estado de un torneo ---");
@@ -204,7 +197,6 @@ public class ConsolaAdministrador {
 		System.out.println("Estado: " + administrador.consultarEstadoTorneo(torneo.getId()));
 	}
 
-	// ---------------- HU-A03: Consultar historial ----------------
 
 	private void consultarHistorial() {
 		System.out.println("--- Consultar historial de un torneo ---");
@@ -216,7 +208,6 @@ public class ConsolaAdministrador {
 		System.out.println(administrador.consultarHistorialTorneo(torneo.getId()));
 	}
 
-	// ---------------- HU-A04: Cupos preferenciales ----------------
 
 	private void consultarCuposPreferenciales() {
 		System.out.println("--- Cupos preferenciales de un torneo ---");
@@ -239,7 +230,6 @@ public class ConsolaAdministrador {
 		}
 	}
 
-	// ---------------- Listado ----------------
 
 	private void listarTorneos() {
 		System.out.println("--- Torneos registrados ---");
@@ -269,7 +259,6 @@ public class ConsolaAdministrador {
 		}
 	}
 
-	// ---------------- Utilidades de lectura ----------------
 
 	private Torneo pedirTorneo() {
 		System.out.print("Id del torneo: ");
@@ -280,7 +269,6 @@ public class ConsolaAdministrador {
 		return club.buscarTorneo(id);
 	}
 
-	/** Devuelve el texto leido o null (y avisa el campo invalido) si esta vacio. */
 	private String leerTextoObligatorio(String campo, String mensaje) {
 		System.out.print(mensaje);
 		String texto = scanner.nextLine().trim();

@@ -24,10 +24,6 @@ import club.ClubDeportivoSeneca;
 import usuarios.Administrador;
 import usuarios.Socio;
 
-/**
- * Pruebas de los requerimientos funcionales de TorneoEquipo
- * (HU-A01 crear torneo, HU-A02 estado, HU-A03 historial, HU-A04 cupos preferenciales).
- */
 public class TorneoEquipoTest {
 
 	private LocalDate fechaInicio;
@@ -49,7 +45,6 @@ public class TorneoEquipoTest {
 		club.agregarTorneo(torneo);
 	}
 
-	/** Equipo de baloncesto MAYORES con 5 jugadores habilitados (minimo para registrar resultados). */
 	private EquipoBaloncesto crearEquipo(String nombre) {
 		EquipoBaloncesto equipo = new EquipoBaloncesto(nombre, "MAYORES", 12);
 		for (int i = 1; i <= 5; i++) {
@@ -58,8 +53,6 @@ public class TorneoEquipoTest {
 		}
 		return equipo;
 	}
-
-	// ======================= HU-A01: Crear torneo =======================
 
 	@Test
 	public void testCrearTorneoConDatosValidos() {
@@ -136,8 +129,6 @@ public class TorneoEquipoTest {
 				TipoTorneo.RECREATIVO, fechaInicio, 0, -100));
 	}
 
-	// ======================= HU-A02: Consultar estado =======================
-
 	@Test
 	public void testEstadoInicialEsEnCurso() {
 		assertEquals(EstadoTorneo.EN_CURSO, torneo.getEstado());
@@ -201,7 +192,6 @@ public class TorneoEquipoTest {
 		assertEquals(null, club.buscarTorneo("NO-EXISTE"));
 	}
 
-	// ======================= HU-A03: Consultar historial =======================
 
 	@Test
 	public void testConsultarHistorialPorIdDeTorneoExistente() {
@@ -340,7 +330,6 @@ public class TorneoEquipoTest {
 		assertThrows(IllegalArgumentException.class, () -> torneo.registrarResultado(partido, null));
 	}
 
-	// ======================= HU-A04: Cupos preferenciales =======================
 
 	@Test
 	public void testTorneoDeSieteCuposTieneDosPreferencialesYCincoRegulares() {

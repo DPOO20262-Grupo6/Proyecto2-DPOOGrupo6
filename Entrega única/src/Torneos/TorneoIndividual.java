@@ -36,7 +36,6 @@ public class TorneoIndividual extends Torneo {
 	// ---------------- Inscripcion (Integrante 2) ----------------
 
 	public boolean inscribir(InscripcionDisciplinaIndividual participante) {
-		// Version basica: el Integrante 2 completa las reglas de cupos preferenciales y pagos.
 		if (participante == null || getEstado() != EstadoTorneo.EN_CURSO || haIniciado()) {
 			return false;
 		}
@@ -61,7 +60,6 @@ public class TorneoIndividual extends Torneo {
 		return participante != null && participantes.contains(participante);
 	}
 
-	// ---------------- Partidos (HU-A06) ----------------
 
 	public PartidoDeporteIndividual programarPartido(List<InscripcionDisciplinaIndividual> jugadores, LocalDate fecha, LocalTime horaInicio, LocalTime horaFin, CanchaDeporteIndividual cancha) {
 		if (getEstado() != EstadoTorneo.EN_CURSO) {
@@ -105,10 +103,6 @@ public class TorneoIndividual extends Torneo {
 		throw new IllegalArgumentException("Deporte individual no valido: " + deporte);
 	}
 
-	/**
-	 * Registra las estadisticas en el mismo orden de los participantes del partido
-	 * y llama a partido.finalizar(), que actualiza el ELO.
-	 */
 	public void registrarResultado(PartidoDeporteIndividual partido, List<EstadisticasPartidoIndividual> estadisticas) {
 		if (getEstado() != EstadoTorneo.EN_CURSO) {
 			throw new IllegalStateException("El torneo ya esta finalizado.");
@@ -128,7 +122,6 @@ public class TorneoIndividual extends Torneo {
 		partido.finalizar();
 	}
 
-	// ---------------- Posiciones y ganador (HU-A03, HU-A05, HU-A06) ----------------
 
 	public int contarVictorias(InscripcionDisciplinaIndividual participante) {
 		int victorias = 0;
@@ -151,7 +144,6 @@ public class TorneoIndividual extends Torneo {
 				InscripcionDisciplinaIndividual p2 = ordenados.get(j);
 				int v1 = contarVictorias(p1);
 				int v2 = contarVictorias(p2);
-				// Desempate por ranking ELO
 				if (v2 > v1 || (v2 == v1 && p2.getRankingElo() > p1.getRankingElo())) {
 					ordenados.set(i, p2);
 					ordenados.set(j, p1);
