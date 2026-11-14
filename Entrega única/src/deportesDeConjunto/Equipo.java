@@ -78,6 +78,32 @@ public abstract class Equipo implements Serializable {
 		return contarJugadoresHabilitados() >= getMinimoJugadoresHabilitados();
 	}
 
+<<<<<<< HEAD
+	/**
+	 * Puntos de liga del equipo en los partidos dados. Futbol: 3 victoria, 1 empate, 0 derrota.
+	 * Baloncesto y voleibol: 2 victoria, 1 derrota.
+	 */
+	public int calcularPuntosLiga(List<PartidoTorneo> partidos) {
+		int puntos = 0;
+		for (int i = 0; i < partidos.size(); i++) {
+			PartidoTorneo partido = partidos.get(i);
+			if (partido.getResultado() == null || !partido.participa(this)) {
+				continue;
+			}
+			boolean esFutbol = getDeporte().equalsIgnoreCase("FUTBOL");
+			if (partido.getResultado().esEmpate()) {
+				puntos = puntos + 1;
+			} else if (this.equals(partido.getGanador())) {
+				puntos = puntos + (esFutbol ? 3 : 2);
+			} else if (!esFutbol) {
+				puntos = puntos + 1;
+			}
+		}
+		return puntos;
+	}
+
+=======
+>>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 	public String getNombre() {
 		return nombre;
 	}

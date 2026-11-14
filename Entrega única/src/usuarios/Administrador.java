@@ -21,6 +21,18 @@ import deportesDeConjunto.ResultadoPartidoEquipo;
 import inscripciones.InscripcionEquipo;
 import inscripciones.InscripcionEquipoFutbol;
 import inventario.UbicacionInventario;
+<<<<<<< HEAD
+import Torneos.Torneo;
+import Torneos.TorneoEquipo;
+import Torneos.TorneoIndividual;
+import deportesDeConjunto.PartidoTorneo;
+import deportesIndividuales.PartidoDeporteIndividual;
+import enumeraciones.EstadoTorneo;
+import enumeraciones.Modalidad;
+import enumeraciones.TipoTorneo;
+import estadisticas.EstadisticasPartidoIndividual;
+=======
+>>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 
 public class Administrador extends Usuario {
 	
@@ -126,4 +138,99 @@ public class Administrador extends Usuario {
 			sugerencia.rechazar();
 		}
 	}
+<<<<<<< HEAD
+
+	// ---------------- Torneos internos (HU-A01 a HU-A06) ----------------
+
+	/**
+	 * HU-A01. Deportes individuales (TENIS, PADEL, TENIS_DE_MESA) crean un TorneoIndividual;
+	 * deportes de conjunto (FUTBOL, BALONCESTO, VOLEIBOL) crean un TorneoEquipo y la modalidad se ignora.
+	 * La modalidad acepta INDIVIDUAL/SENCILLOS o DOBLES.
+	 * @throws Exception 
+	 */
+	public Torneo crearTorneo(String nombre, String deporte, String modalidad, String categoria, int cupos, TipoTorneo tipo, LocalDate fechaInicio, double tarifa, double bono) throws Exception {
+		if (deporte == null) {
+			throw new IllegalArgumentException("Debe indicar el deporte del torneo.");
+		}
+		if (fechaInicio != null && fechaInicio.isBefore(LocalDate.now())) {
+			throw new IllegalArgumentException("La fecha de inicio no puede estar en el pasado.");
+		}
+		if (tipo == TipoTorneo.COMPETITIVO && tarifa <= 0) {
+			throw new IllegalArgumentException("Un torneo competitivo debe tener tarifa de inscripcion.");
+		}
+		if (tipo == TipoTorneo.RECREATIVO && bono <= 0) {
+			throw new IllegalArgumentException("Un torneo recreativo debe tener valor de bono para el ganador.");
+		}
+
+		String id = club.generarIdTorneo();
+		String deporteMayus = deporte.trim().toUpperCase();
+		Torneo torneo;
+		if (deporteMayus.equals("TENIS") || deporteMayus.equals("PADEL") || deporteMayus.equals("TENIS_DE_MESA")) {
+			torneo = new TorneoIndividual(id, nombre, deporteMayus, convertirModalidad(modalidad), categoria, cupos, tipo, fechaInicio, tarifa, bono);
+		} else if (deporteMayus.equals("FUTBOL") || deporteMayus.equals("BALONCESTO") || deporteMayus.equals("VOLEIBOL")) {
+			torneo = new TorneoEquipo(id, nombre, deporteMayus, categoria, cupos, tipo, fechaInicio, tarifa, bono);
+		} else {
+			throw new IllegalArgumentException("Deporte no valido: " + deporte);
+		}
+		club.agregarTorneo(torneo);
+		return torneo;
+	}
+
+	private Modalidad convertirModalidad(String modalidad) {
+		if (modalidad == null) {
+			throw new IllegalArgumentException("Debe indicar la modalidad (INDIVIDUAL o DOBLES).");
+		}
+		String m = modalidad.trim().toUpperCase();
+		if (m.equals("INDIVIDUAL") || m.equals("SENCILLOS")) {
+			return Modalidad.SENCILLOS;
+		}
+		if (m.equals("DOBLES")) {
+			return Modalidad.DOBLES;
+		}
+		throw new IllegalArgumentException("Modalidad no valida: " + modalidad);
+	}
+
+	private Torneo obtenerTorneo(String id) {
+		Torneo torneo = club.buscarTorneo(id);
+		if (torneo == null) {
+			throw new IllegalArgumentException("No existe un torneo con id " + id);
+		}
+		return torneo;
+	}
+
+	/** HU-A02 */
+	public EstadoTorneo consultarEstadoTorneo(String id) {
+		return obtenerTorneo(id).getEstado();
+	}
+
+	/** HU-A03 */
+	public String consultarHistorialTorneo(String id) {
+		return obtenerTorneo(id).consultarHistorial();
+	}
+
+	/** HU-A05 */
+	public void finalizarTorneo(String id) {
+		obtenerTorneo(id).finalizar();
+	}
+
+	/** HU-A06 - torneo por equipos */
+	public void registrarResultadoTorneo(String id, PartidoTorneo partido, ResultadoPartidoEquipo resultado) {
+		Torneo torneo = obtenerTorneo(id);
+		if (!(torneo instanceof TorneoEquipo)) {
+			throw new IllegalArgumentException("El torneo " + id + " no es por equipos.");
+		}
+		((TorneoEquipo) torneo).registrarResultado(partido, resultado);
+	}
+
+	/** HU-A06 - torneo individual: una estadistica por participante, en el orden del partido */
+	public void registrarResultadoTorneo(String id, PartidoDeporteIndividual partido, List<EstadisticasPartidoIndividual> resultado) {
+		Torneo torneo = obtenerTorneo(id);
+		if (!(torneo instanceof TorneoIndividual)) {
+			throw new IllegalArgumentException("El torneo " + id + " no es individual.");
+		}
+		((TorneoIndividual) torneo).registrarResultado(partido, resultado);
+	}
 }
+=======
+}
+>>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
