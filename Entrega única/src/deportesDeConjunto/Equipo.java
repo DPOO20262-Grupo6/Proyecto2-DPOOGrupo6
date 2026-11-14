@@ -78,6 +78,7 @@ public abstract class Equipo implements Serializable {
 		return contarJugadoresHabilitados() >= getMinimoJugadoresHabilitados();
 	}
 
+<<<<<<< HEAD
 	/**
 	 * Puntos de liga del equipo en los partidos dados. Futbol: 3 victoria, 1 empate, 0 derrota.
 	 * Baloncesto y voleibol: 2 victoria, 1 derrota.
@@ -101,6 +102,8 @@ public abstract class Equipo implements Serializable {
 		return puntos;
 	}
 
+=======
+>>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 	public String getNombre() {
 		return nombre;
 	}
