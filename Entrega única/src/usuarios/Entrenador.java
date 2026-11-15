@@ -45,8 +45,20 @@ public class Entrenador extends EmpleadoDelClub {
 		return false;
 	}
 
-	public void registrarAsistencia(SesionDeEntrenamiento sesion, Socio socio, EstadoAsistencia estado, Integer nota, String comentario) {
-		sesion.registrarAsistencia(socio, estado, nota, comentario);
+	public void registrarAsistencia(SesionDeEntrenamiento sesion, Socio socio, EstadoAsistencia estado) {
+		validarSesionPropia(sesion);
+		sesion.registrarAsistencia(socio, estado);
+	}
+
+	public void registrarEvaluacion(SesionDeEntrenamiento sesion, Socio socio, double nota, String comentario) {
+		validarSesionPropia(sesion);
+		sesion.registrarEvaluacion(socio, nota, comentario);
+	}
+
+	private void validarSesionPropia(SesionDeEntrenamiento sesion) {
+		if (sesion == null || sesion.getEntrenador() != this) {
+			throw new IllegalArgumentException("La sesion pertenece a otro entrenador.");
+		}
 	}
 
 	public List<SesionDeEntrenamiento> getSesiones() {

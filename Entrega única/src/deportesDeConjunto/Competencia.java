@@ -16,6 +16,7 @@ public abstract class Competencia implements Serializable {
 	private String deporte;
 	private String categoriaHabilitada;
 	private int jugadoresMinimosNomina;
+	private boolean finalizada;
 	
 	protected List<NominaCompetencia> nominas;
 	protected List<PartidoDeCompetencia> partidos;
@@ -48,6 +49,14 @@ public abstract class Competencia implements Serializable {
 		
 		nominas.add(nomina);
 		return nomina;
+	}
+
+	public boolean isEnCurso() {
+		return !finalizada;
+	}
+
+	public void finalizar() {
+		this.finalizada = true;
 	}
 
 	public boolean validarCategoria(Equipo equipo) {

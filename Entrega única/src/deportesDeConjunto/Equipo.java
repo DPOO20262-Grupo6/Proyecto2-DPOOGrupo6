@@ -15,6 +15,7 @@ public abstract class Equipo implements Serializable {
 	private String categoria;
 	private int cupoMaximoJugadores;
 	private List<InscripcionEquipo> inscripciones;
+	private boolean dadoDeBaja;
 
 	public Equipo(String nombre, String categoria, int cupoMaximoJugadores) {
 		this.nombre = nombre;
@@ -34,6 +35,17 @@ public abstract class Equipo implements Serializable {
 			throw new IllegalArgumentException("El numero de camiseta ya esta ocupado en el equipo.");
 		}
 		inscripciones.add(inscripcion);
+	}
+
+	public boolean isActivo() {
+		return !dadoDeBaja;
+	}
+
+	public void darDeBaja() {
+		this.dadoDeBaja = true;
+		for (int i = 0; i < inscripciones.size(); i++) {
+			inscripciones.get(i).setActiva(false);
+		}
 	}
 
 	public void retirarJugador(InscripcionEquipo inscripcion) {

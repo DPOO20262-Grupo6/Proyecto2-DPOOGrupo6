@@ -103,6 +103,15 @@ public class Administrador extends Usuario {
 	}
 
 	public Equipo crearEquipo(String tipo, String nombre, String categoria, int cupo) {
+		if (estaVacio(tipo) || estaVacio(nombre) || estaVacio(categoria)) {
+			throw new IllegalArgumentException("Faltan datos del equipo: nombre, deporte y categoria son obligatorios.");
+		}
+		if (cupo <= 0) {
+			throw new IllegalArgumentException("El cupo maximo debe ser mayor que cero.");
+		}
+		if (club.buscarEquipoActivo(nombre, tipo, categoria) != null) {
+			throw new IllegalArgumentException("Ya existe el equipo " + nombre + " de " + tipo + " en la categoria " + categoria + ".");
+		}
 		Equipo eq = null;
 		if (tipo.equalsIgnoreCase("FUTBOL")) {
 			eq = new EquipoFutbol(nombre, categoria, cupo);
@@ -113,15 +122,36 @@ public class Administrador extends Usuario {
 		} else {
 			throw new IllegalArgumentException("Deporte no valido: " + tipo);
 		}
+		if (cupo < eq.getMinimoJugadoresHabilitados()) {
+			throw new IllegalArgumentException("El cupo es menor al minimo de " + eq.getMinimoJugadoresHabilitados() + " habilitados del deporte: el equipo nunca podria disputar un partido.");
+		}
 		club.agregarEquipo(eq);
 		return eq;
 	}
 
 	public void darDeBajaEquipo(Equipo equipo) {
-		club.getEquipos().remove(equipo);
+		if (!equipo.isActivo()) {
+			throw new IllegalArgumentException("El equipo " + equipo.getNombre() + " ya esta inactivo.");
+		}
+		int pendientes = club.contarPartidosPendientes(equipo);
+		if (pendientes > 0) {
+			throw new IllegalArgumentException("El equipo tiene " + pendientes + " partido(s) pendiente(s).");
+		}
+		Competencia competencia = club.buscarCompetenciaEnCursoDeEquipo(equipo);
+		if (competencia != null) {
+			throw new IllegalArgumentException("El equipo esta inscrito en la competencia en curso " + competencia.getNombre() + ".");
+		}
+		equipo.darDeBaja();
 	}
 
 	public InscripcionEquipo inscribirJugador(Equipo equipo, Socio socio, String posicion, int numeroCamiseta) {
+		if (!equipo.isActivo()) {
+			throw new IllegalArgumentException("El equipo " + equipo.getNombre() + " esta inactivo.");
+		}
+		Equipo actual = club.buscarEquipoActivoDeSocio(socio, equipo.getDeporte());
+		if (actual != null) {
+			throw new IllegalArgumentException("El socio ya pertenece al equipo " + actual.getNombre() + " del mismo deporte.");
+		}
 		InscripcionEquipo ie = null;
 		if (equipo instanceof EquipoFutbol) {
 			ie = new InscripcionEquipoFutbol(socio, equipo, posicion, numeroCamiseta);
@@ -133,11 +163,20 @@ public class Administrador extends Usuario {
 	}
 
 	public void darDeBajaJugador(Equipo equipo, InscripcionEquipo inscripcion) {
+		if (!equipo.getInscripciones().contains(inscripcion)) {
+			throw new IllegalArgumentException("El jugador ya fue dado de baja del equipo.");
+		}
+		Competencia competencia = club.buscarCompetenciaEnCursoDeJugador(inscripcion);
+		if (competencia != null) {
+			throw new IllegalArgumentException("El jugador esta en la nomina de la competencia en curso " + competencia.getNombre() + ".");
+		}
 		equipo.retirarJugador(inscripcion);
 	}
 
 	public NominaCompetencia inscribirEquipoEnCompetencia(Equipo equipo, Competencia competencia, List<InscripcionEquipo> jugadores) {
-		return competencia.inscribirEquipo(equipo, jugadores);
+		NominaCompetencia nomina = competencia.inscribirEquipo(equipo, jugadores);
+		club.registrarCompetencia(competencia);
+		return nomina;
 	}
 
 	public PartidoInterno programarPartidoInterno(Equipo local, Equipo visitante, LocalDate fecha) {

@@ -200,11 +200,14 @@ public class ConsolaPruebas {
 
 		SesionDeEntrenamiento sesion = entrenador1.planearSesion(LocalDate.now(), LocalTime.of(8, 0), 60, canchaTenis, dosSocios);
 		club.getSesiones().add(sesion);
-		entrenador1.registrarAsistencia(sesion, dosSocios.get(0), EstadoAsistencia.ASISTIO, 5, "Buen entrenamiento");
+		sesion.setFecha(LocalDate.now().minusDays(1));
+		entrenador1.registrarAsistencia(sesion, dosSocios.get(0), EstadoAsistencia.ASISTIO);
+		entrenador1.registrarEvaluacion(sesion, dosSocios.get(0), 5, "Buen entrenamiento");
 		System.out.println("Asistencia registrada: " + sesion.getAsistencias().get(0).toString());
 
 		try {
-			entrenador1.registrarAsistencia(sesion, dosSocios.get(1), EstadoAsistencia.ASISTIO, 10, "Nota invalida");
+			entrenador1.registrarAsistencia(sesion, dosSocios.get(1), EstadoAsistencia.ASISTIO);
+			entrenador1.registrarEvaluacion(sesion, dosSocios.get(1), 10, "Nota invalida");
 		} catch (Exception e) {
 			System.out.println("Error esperado: " + e.getMessage());
 		}

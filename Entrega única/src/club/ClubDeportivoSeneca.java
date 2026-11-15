@@ -41,6 +41,8 @@ import estadisticas.EstadisticasPartidoFutbol;
 import estadisticas.EstadisticasPartidoIndividual;
 import inscripciones.InscripcionDisciplinaIndividual;
 import instalaciones.CanchaDeporteIndividual;
+import inscripciones.InscripcionEquipo;
+import instalaciones.InstalacionDeporteConjunto;
 import instalaciones.InstalacionDeportiva;
 import inventario.UbicacionInventario;
 import usuarios.Administrador;
@@ -72,6 +74,7 @@ public class ClubDeportivoSeneca implements Serializable {
 	private List<Torneo> torneos;
 	private List<PagoMensualidad> pagosMensualidades;
 	private List<PartidoDeporteIndividual> partidosPractica;
+	private List<Competencia> competencias;
 
 	private TiendaDeportiva tienda;
 	private Cafeteria cafeteria;
@@ -95,6 +98,7 @@ public class ClubDeportivoSeneca implements Serializable {
 		this.torneos = new ArrayList<Torneo>();
 		this.pagosMensualidades = new ArrayList<PagoMensualidad>();
 		this.partidosPractica = new ArrayList<PartidoDeporteIndividual>();
+		this.competencias = new ArrayList<Competencia>();
 
 		this.administrador = new Administrador(NOMBRE_ADMIN, LOGIN_ADMIN, PASSWORD_ADMIN, this);
 		UbicacionInventario ubicacionTienda = new UbicacionInventario("Tienda Principal", "TIENDA");
@@ -436,6 +440,137 @@ public class ClubDeportivoSeneca implements Serializable {
 		return historial;
 	}
 
+	public SesionDeEntrenamiento planearSesionAcademia(Entrenador entrenador, LocalDate fecha, LocalTime hora, int duracion, CanchaDeporteIndividual cancha, List<Socio> convocados) {
+		validarDatosSesion(entrenador, fecha, hora, duracion, cancha);
+		if (convocados == null || convocados.isEmpty()) {
+			throw new IllegalArgumentException("Debe convocar al menos un socio.");
+		}
+		for (int i = 0; i < convocados.size(); i++) {
+			if (buscarInscripcion(convocados.get(i), cancha.getDisciplina()) == null) {
+				throw new IllegalArgumentException("El convocado " + convocados.get(i).getNombre() + " no pertenece a la disciplina " + cancha.getDisciplina() + ".");
+			}
+		}
+		SesionDeEntrenamiento sesion = entrenador.planearSesion(fecha, hora, duracion, cancha, convocados);
+		sesion.setDisciplina(cancha.getDisciplina());
+		sesiones.add(sesion);
+		return sesion;
+	}
+
+	public SesionDeEntrenamiento planearSesionEquipo(Entrenador entrenador, LocalDate fecha, LocalTime hora, int duracion, InstalacionDeportiva instalacion, Equipo equipo) {
+		if (equipo == null) {
+			throw new IllegalArgumentException("Debe indicar el equipo.");
+		}
+		validarDatosSesion(entrenador, fecha, hora, duracion, instalacion);
+		if (!(instalacion instanceof InstalacionDeporteConjunto) || !equipo.getDeporte().equalsIgnoreCase(((InstalacionDeporteConjunto) instalacion).getDeporte())) {
+			throw new IllegalArgumentException("La instalacion " + instalacion.getNombre() + " no es compatible con la disciplina " + equipo.getDeporte() + ".");
+		}
+		List<Socio> jugadores = new ArrayList<Socio>();
+		for (int i = 0; i < equipo.getInscripciones().size(); i++) {
+			if (equipo.getInscripciones().get(i).estaHabilitado()) {
+				jugadores.add(equipo.getInscripciones().get(i).getSocio());
+			}
+		}
+		SesionDeEntrenamiento sesion = entrenador.planearSesion(fecha, hora, duracion, instalacion, jugadores);
+		sesion.setEquipo(equipo);
+		sesion.setDisciplina(equipo.getDeporte());
+		sesiones.add(sesion);
+		return sesion;
+	}
+
+	private void validarDatosSesion(Entrenador entrenador, LocalDate fecha, LocalTime hora, int duracion, InstalacionDeportiva instalacion) {
+		if (entrenador == null || instalacion == null || fecha == null || hora == null) {
+			throw new IllegalArgumentException("Faltan datos de la sesion.");
+		}
+		if (duracion <= 0) {
+			throw new IllegalArgumentException("La duracion debe ser mayor que 0.");
+		}
+		if (fecha.isBefore(LocalDate.now())) {
+			throw new IllegalArgumentException("La fecha de la sesion no puede ser pasada.");
+		}
+		if (entrenador.tieneConflictoHorario(fecha, hora, duracion)) {
+			throw new IllegalArgumentException("El entrenador ya tiene una sesion traslapada en ese horario.");
+		}
+		boolean ocupada = !instalacion.estaDisponible(fecha, hora, hora.plusMinutes(duracion));
+		for (int i = 0; i < sesiones.size() && !ocupada; i++) {
+			ocupada = sesiones.get(i).getInstalacion() == instalacion && sesiones.get(i).seCruzaCon(fecha, hora, duracion);
+		}
+		if (ocupada) {
+			throw new IllegalArgumentException("La instalacion " + instalacion.getNombre() + " esta ocupada en ese horario.");
+		}
+	}
+
+	public void convocar(SesionDeEntrenamiento sesion, Socio socio) {
+		boolean pertenece;
+		if (sesion.getEquipo() != null) {
+			pertenece = false;
+			for (int i = 0; i < sesion.getEquipo().getInscripciones().size(); i++) {
+				InscripcionEquipo inscripcion = sesion.getEquipo().getInscripciones().get(i);
+				if (inscripcion.estaHabilitado() && inscripcion.getSocio().equals(socio)) {
+					pertenece = true;
+				}
+			}
+		} else {
+			pertenece = buscarInscripcion(socio, sesion.getDisciplina()) != null;
+		}
+		if (!pertenece) {
+			throw new IllegalArgumentException("El socio no pertenece al equipo o a la disciplina de la sesion.");
+		}
+		sesion.convocar(socio);
+	}
+
+	private List<SesionDeEntrenamiento> sesionesDeSocio(Socio socio) {
+		List<SesionDeEntrenamiento> resultado = new ArrayList<SesionDeEntrenamiento>();
+		for (int i = 0; i < sesiones.size(); i++) {
+			if (sesiones.get(i).getConvocados().contains(socio)) {
+				resultado.add(sesiones.get(i));
+			}
+		}
+		resultado.sort((a, b) -> {
+			int porFecha = a.getFecha().compareTo(b.getFecha());
+			return porFecha != 0 ? porFecha : a.getHora().compareTo(b.getHora());
+		});
+		return resultado;
+	}
+
+	public String consultarConvocatorias(Socio socio) {
+		List<SesionDeEntrenamiento> lista = sesionesDeSocio(socio);
+		if (lista.isEmpty()) {
+			return "No tiene convocatorias a entrenamiento.";
+		}
+		StringBuilder texto = new StringBuilder();
+		for (int i = 0; i < lista.size(); i++) {
+			SesionDeEntrenamiento sesion = lista.get(i);
+			texto.append(sesion.getFecha()).append(" ").append(sesion.getHora())
+				.append(" (").append(sesion.getDuracion()).append(" min) - ")
+				.append(sesion.getInstalacion().getNombre()).append(" - Entrenador: ")
+				.append(sesion.getEntrenador().getNombre()).append("\n");
+		}
+		return texto.toString();
+	}
+
+	public String consultarAsistencia(Socio socio) {
+		List<SesionDeEntrenamiento> lista = sesionesDeSocio(socio);
+		if (lista.isEmpty()) {
+			return "No hay registros de asistencia.";
+		}
+		StringBuilder texto = new StringBuilder();
+		for (int i = 0; i < lista.size(); i++) {
+			SesionDeEntrenamiento sesion = lista.get(i);
+			RegistroAsistencia registro = sesion.buscarRegistro(socio);
+			texto.append(sesion.getFecha()).append(" ").append(sesion.getHora()).append(" - ");
+			if (registro == null) {
+				texto.append("Pendiente");
+			} else {
+				texto.append(registro.getEstadoAsistencia());
+				if (registro.getNotaDesempeno() != null) {
+					texto.append(" - Nota: ").append(registro.getNotaDesempeno()).append(" - ").append(registro.getComentario());
+				}
+			}
+			texto.append("\n");
+		}
+		return texto.toString();
+	}
+
 	public int contarInstalacionesOcupadas(String disciplina, LocalDate fecha, LocalTime horaInicio, LocalTime horaFin) {
 		int contador = 0;
 		for (int i = 0; i < reservas.size(); i++) {
@@ -599,6 +734,10 @@ public class ClubDeportivoSeneca implements Serializable {
 				clubCargado.partidosPractica = new ArrayList<PartidoDeporteIndividual>();
 			}
 			this.partidosPractica = clubCargado.partidosPractica;
+			if (clubCargado.competencias == null) {
+				clubCargado.competencias = new ArrayList<Competencia>();
+			}
+			this.competencias = clubCargado.competencias;
 			this.tienda = clubCargado.tienda;
 			this.cafeteria = clubCargado.cafeteria;
 			this.bodegaCentral = clubCargado.bodegaCentral;
@@ -610,6 +749,67 @@ public class ClubDeportivoSeneca implements Serializable {
 
 	public void agregarEquipo(Equipo equipo) {
 		equipos.add(equipo);
+	}
+
+	public Equipo buscarEquipoActivo(String nombre, String deporte, String categoria) {
+		for (int i = 0; i < equipos.size(); i++) {
+			Equipo equipo = equipos.get(i);
+			if (equipo.isActivo() && equipo.getNombre().equalsIgnoreCase(nombre) && equipo.getDeporte().equalsIgnoreCase(deporte) && equipo.getCategoria().equalsIgnoreCase(categoria)) {
+				return equipo;
+			}
+		}
+		return null;
+	}
+
+	public Equipo buscarEquipoActivoDeSocio(Socio socio, String deporte) {
+		for (int i = 0; i < equipos.size(); i++) {
+			Equipo equipo = equipos.get(i);
+			if (equipo.isActivo() && equipo.getDeporte().equalsIgnoreCase(deporte)) {
+				for (int j = 0; j < equipo.getInscripciones().size(); j++) {
+					InscripcionEquipo inscripcion = equipo.getInscripciones().get(j);
+					if (inscripcion.isActiva() && inscripcion.getSocio().equals(socio)) {
+						return equipo;
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	public void registrarCompetencia(Competencia competencia) {
+		if (competencia != null && !competencias.contains(competencia)) {
+			competencias.add(competencia);
+		}
+	}
+
+	public Competencia buscarCompetenciaEnCursoDeJugador(InscripcionEquipo inscripcion) {
+		for (int i = 0; i < competencias.size(); i++) {
+			if (competencias.get(i).isEnCurso() && competencias.get(i).estaEnNomina(inscripcion)) {
+				return competencias.get(i);
+			}
+		}
+		return null;
+	}
+
+	public Competencia buscarCompetenciaEnCursoDeEquipo(Equipo equipo) {
+		for (int i = 0; i < competencias.size(); i++) {
+			if (competencias.get(i).isEnCurso() && competencias.get(i).buscarNomina(equipo) != null) {
+				return competencias.get(i);
+			}
+		}
+		return null;
+	}
+
+	public int contarPartidosPendientes(Equipo equipo) {
+		int pendientes = 0;
+		for (int i = 0; i < partidosInternos.size(); i++) {
+			PartidoInterno partido = partidosInternos.get(i);
+			boolean participa = partido.getEquipoLocal() == equipo || partido.getEquipoVisitante() == equipo;
+			if (participa && partido.getResultado() == null) {
+				pendientes = pendientes + 1;
+			}
+		}
+		return pendientes;
 	}
 
 	public void agregarTorneo(Torneo torneo) {
@@ -658,6 +858,7 @@ public class ClubDeportivoSeneca implements Serializable {
 	public List<PagoMensualidad> getPagosMensualidades() { return pagosMensualidades; }
 	public List<ReservaInstalacionDeporteIndividual> getReservas() { return reservas; }
 	public List<PartidoDeporteIndividual> getPartidosPractica() { return partidosPractica; }
+	public List<Competencia> getCompetencias() { return competencias; }
 	public TiendaDeportiva getTienda() { return tienda; }
 	public Cafeteria getCafeteria() { return cafeteria; }
 	public UbicacionInventario getBodegaCentral() { return bodegaCentral; }
