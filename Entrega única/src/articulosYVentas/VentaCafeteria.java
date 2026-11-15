@@ -37,11 +37,7 @@ public class VentaCafeteria extends Venta {
 
 	@Override
 	public double calcularTotal() {
-		double total = getBaseGravable() + calcularImpuestos() + calcularPropina() - puntosFidelidadUtilizados;
-		if (total < 0) {
-			total = 0;
-		}
-		this.valorTotal = Math.round(total * 100.0) / 100.0;
+		this.valorTotal = Math.round((calcularTotalSinPropina() + calcularPropina()) * 100.0) / 100.0;
 		return this.valorTotal;
 	}
 

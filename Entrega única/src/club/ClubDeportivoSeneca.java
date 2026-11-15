@@ -22,6 +22,7 @@ import administracion.TurnoEmpleado;
 import articulosYVentas.Cafeteria;
 import articulosYVentas.TiendaDeportiva;
 import articulosYVentas.VentaCafeteria;
+
 import articulosYVentas.VentaTienda;
 import deportesDeConjunto.Ascun;
 import deportesDeConjunto.Competencia;
@@ -279,6 +280,21 @@ public class ClubDeportivoSeneca implements Serializable {
 			}
 		}
 		return false;
+	}
+
+	public void procesarVentaCafeteria(VentaCafeteria venta, String codigoDescuento) {
+		String prohibicion = null;
+		LocalDate hoy = LocalDate.now();
+		LocalTime ahora = LocalTime.now();
+		for (int i = 0; i < reservas.size() && prohibicion == null; i++) {
+			ReservaInstalacionDeporteIndividual reserva = reservas.get(i);
+			boolean activaAhora = "CONFIRMADA".equalsIgnoreCase(reserva.getEstado()) && reserva.getFecha().equals(hoy)
+					&& !ahora.isBefore(reserva.getHoraInicio()) && ahora.isBefore(reserva.getHoraFin());
+			if (activaAhora && reserva.getSocios().contains(venta.getComprador()) && !reserva.getCancha().permiteBebidaCaliente()) {
+				prohibicion = "Tiene una reserva activa en " + reserva.getCancha().getNombre() + ": no se permiten bebidas calientes.";
+			}
+		}
+		cafeteria.procesarVenta(venta, prohibicion, tienda.resolverDescuento(venta.getComprador(), codigoDescuento));
 	}
 
 	public List<ReservaInstalacionDeporteIndividual> getReservasDeSocio(Socio socio) {

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import inventario.UbicacionInventario;
 import usuarios.EmpleadoDelClub;
+import usuarios.Usuario;
 
 public class TiendaDeportiva implements Serializable {
 	
@@ -38,37 +39,43 @@ public class TiendaDeportiva implements Serializable {
 		return ubicacionTienda.obtenerCantidad(articulo) >= cantidad;
 	}
 
+	public void desactivarCodigo(String codigo) {
+		codigosEmpleadosValidos.remove(codigo);
+	}
+
+	public double resolverDescuento(Usuario comprador, String codigoDescuento) {
+		boolean sinCodigo = codigoDescuento == null || codigoDescuento.trim().isEmpty();
+		if (sinCodigo) {
+			if (comprador instanceof EmpleadoDelClub && codigosEmpleadosValidos.contains(((EmpleadoDelClub) comprador).getCodigoDescuento())) {
+				return EmpleadoDelClub.DESCUENTO_PROPIO;
+			}
+			return 0;
+		}
+		if (!codigosEmpleadosValidos.contains(codigoDescuento)) {
+			throw new IllegalArgumentException("El codigo de descuento " + codigoDescuento + " no existe o esta inactivo.");
+		}
+		if (comprador instanceof EmpleadoDelClub && codigoDescuento.equals(((EmpleadoDelClub) comprador).getCodigoDescuento())) {
+			return EmpleadoDelClub.DESCUENTO_PROPIO;
+		}
+		return EmpleadoDelClub.DESCUENTO_TERCEROS;
+	}
+
 	public void procesarVenta(VentaTienda venta, String codigoDescuento) {
 		for (int i = 0; i < venta.getDetalles().size(); i++) {
 			DetalleVenta detalle = venta.getDetalles().get(i);
+			if (!catalogo.contains(detalle.getArticulo())) {
+				throw new IllegalArgumentException("El articulo " + detalle.getArticulo().getNombre() + " no existe en el catalogo.");
+			}
 			if (!verificarExistencias(detalle.getArticulo(), detalle.getCantidadArticulo())) {
 				throw new IllegalStateException("No hay suficiente stock en tienda para " + detalle.getArticulo().getNombre());
 			}
 		}
-
-		if (venta.getComprador() instanceof EmpleadoDelClub) {
-			if (codigoDescuento != null && !codigoDescuento.equals("")) {
-				throw new IllegalStateException("El descuento de empleado no es acumulable con otros codigos.");
-			}
-			venta.aplicarDescuento(EmpleadoDelClub.DESCUENTO_PROPIO);
-		} else if (codigoDescuento != null && !codigoDescuento.equals("")) {
-			if (!codigosEmpleadosValidos.contains(codigoDescuento)) {
-				throw new IllegalArgumentException("El codigo de descuento no es valido.");
-			}
-			venta.aplicarDescuento(EmpleadoDelClub.DESCUENTO_TERCEROS);
-		}
-
+		venta.aplicarDescuentoValidandoRedencion(resolverDescuento(venta.getComprador(), codigoDescuento));
 		for (int i = 0; i < venta.getDetalles().size(); i++) {
 			DetalleVenta detalle = venta.getDetalles().get(i);
 			ubicacionTienda.retirarExistencias(detalle.getArticulo(), detalle.getCantidadArticulo());
 		}
-
-		venta.calcularTotal();
-		int generados = venta.calcularPuntosGenerados();
-		if (venta.getPuntosFidelidadUtilizados() > 0) {
-		    venta.getComprador().redimirPuntos(venta.getPuntosFidelidadUtilizados());
-		}
-		venta.getComprador().acumularPuntos(generados);
+		venta.registrarPuntos();
 		ventas.add(venta);
 	}
 

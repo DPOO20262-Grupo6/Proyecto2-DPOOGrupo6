@@ -27,7 +27,46 @@ public abstract class Venta implements Serializable {
 	}
 
 	public void agregarDetalle(Articulo articulo, int cantidad) {
+		if (articulo == null) {
+			throw new IllegalArgumentException("El articulo no existe.");
+		}
+		if (cantidad <= 0) {
+			throw new IllegalArgumentException("La cantidad debe ser mayor que cero.");
+		}
 		detalles.add(new DetalleVenta(articulo, cantidad));
+	}
+
+	public void validarRedencion() {
+		if (puntosFidelidadUtilizados <= 0) {
+			return;
+		}
+		int saldo = comprador.getPuntosDeFidelidad();
+		double totalAntesDeRedimir = getBaseGravable() + calcularImpuestos();
+		if (puntosFidelidadUtilizados > saldo || puntosFidelidadUtilizados > totalAntesDeRedimir) {
+			throw new IllegalArgumentException("No se pueden redimir " + puntosFidelidadUtilizados + " puntos. Saldo disponible: " + saldo + ".");
+		}
+	}
+
+	public void aplicarDescuentoValidandoRedencion(double porcentaje) {
+		double anterior = descuentoAplicado;
+		if (porcentaje > 0) {
+			aplicarDescuento(porcentaje);
+		}
+		try {
+			validarRedencion();
+		} catch (IllegalArgumentException e) {
+			descuentoAplicado = anterior;
+			throw e;
+		}
+	}
+
+	public void registrarPuntos() {
+		calcularTotal();
+		int generados = calcularPuntosGenerados();
+		if (puntosFidelidadUtilizados > 0) {
+			comprador.redimirPuntos(puntosFidelidadUtilizados);
+		}
+		comprador.acumularPuntos(generados);
 	}
 
 	public double calcularSubtotal() {
@@ -58,17 +97,21 @@ public abstract class Venta implements Serializable {
 
 	public abstract double calcularImpuestos();
 
-	public double calcularTotal() {
+	public double calcularTotalSinPropina() {
 		double total = getBaseGravable() + calcularImpuestos() - puntosFidelidadUtilizados;
 		if (total < 0) {
 			total = 0;
 		}
-		this.valorTotal = Math.round(total * 100.0) / 100.0;
+		return Math.round(total * 100.0) / 100.0;
+	}
+
+	public double calcularTotal() {
+		this.valorTotal = calcularTotalSinPropina();
 		return this.valorTotal;
 	}
 
 	public int calcularPuntosGenerados() {
-		this.puntosFidelidadGenerados = (int) (calcularTotal() * PORCENTAJE_PUNTOS);
+		this.puntosFidelidadGenerados = (int) (calcularTotalSinPropina() * PORCENTAJE_PUNTOS);
 		return this.puntosFidelidadGenerados;
 	}
 

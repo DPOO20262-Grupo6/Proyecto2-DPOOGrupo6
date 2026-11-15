@@ -261,6 +261,9 @@ public class ConsolaPruebas {
 		club.getCafeteria().agregarProducto(cafe);
 		club.getCafeteria().agregarProducto(agua);
 		club.getCafeteria().agregarProducto(barraCereal);
+		club.getCafeteria().reabastecer(cafe, 10);
+		club.getCafeteria().reabastecer(agua, 10);
+		club.getCafeteria().reabastecer(barraCereal, 10);
 
 		List<Articulo> listaProductos = new ArrayList<Articulo>();
 		listaProductos.add(barraCereal);
