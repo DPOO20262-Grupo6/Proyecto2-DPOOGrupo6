@@ -15,10 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-<<<<<<< HEAD
 import Torneos.Torneo;
-=======
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 import administracion.TurnoEmpleado;
 import articulosYVentas.Cafeteria;
 import articulosYVentas.TiendaDeportiva;
@@ -48,13 +45,10 @@ import usuarios.Usuario;
 public class ClubDeportivoSeneca implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
-<<<<<<< HEAD
 
 	public static final String NOMBRE_ADMIN = "Administrador";
 	public static final String LOGIN_ADMIN = "admin";
 	public static final String PASSWORD_ADMIN = "admin123";
-=======
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 	
 	private Map<String, Integer> maximoInstalacionesPorDisciplina;
 	private Administrador administrador;
@@ -67,10 +61,7 @@ public class ClubDeportivoSeneca implements Serializable {
 	private List<PartidoInterno> partidosInternos;
 	private List<TurnoEmpleado> turnos;
 	private List<InscripcionDisciplinaIndividual> inscripcionesIndividuales;
-<<<<<<< HEAD
 	private List<Torneo> torneos;
-=======
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 	
 	private TiendaDeportiva tienda;
 	private Cafeteria cafeteria;
@@ -91,14 +82,9 @@ public class ClubDeportivoSeneca implements Serializable {
 		this.partidosInternos = new ArrayList<PartidoInterno>();
 		this.turnos = new ArrayList<TurnoEmpleado>();
 		this.inscripcionesIndividuales = new ArrayList<InscripcionDisciplinaIndividual>();
-<<<<<<< HEAD
 		this.torneos = new ArrayList<Torneo>();
 
 		this.administrador = new Administrador(NOMBRE_ADMIN, LOGIN_ADMIN, PASSWORD_ADMIN, this);
-=======
-
-		this.administrador = new Administrador("Administrador", "admin", "admin123", this);
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 		UbicacionInventario ubicacionTienda = new UbicacionInventario("Tienda Principal", "TIENDA");
 		this.bodegaCentral = new UbicacionInventario("Bodega", "BODEGA");
 		this.tienda = new TiendaDeportiva(ubicacionTienda);
@@ -336,13 +322,10 @@ public class ClubDeportivoSeneca implements Serializable {
 			this.partidosInternos = clubCargado.partidosInternos;
 			this.turnos = clubCargado.turnos;
 			this.inscripcionesIndividuales = clubCargado.inscripcionesIndividuales;
-<<<<<<< HEAD
 			this.torneos = clubCargado.torneos;
 			if (this.torneos == null) {
 				this.torneos = new ArrayList<Torneo>();
 			}
-=======
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 			this.tienda = clubCargado.tienda;
 			this.cafeteria = clubCargado.cafeteria;
 			this.bodegaCentral = clubCargado.bodegaCentral;
@@ -356,7 +339,6 @@ public class ClubDeportivoSeneca implements Serializable {
 		equipos.add(equipo);
 	}
 
-<<<<<<< HEAD
 	public void agregarTorneo(Torneo torneo) {
 		if (torneo == null) {
 			throw new IllegalArgumentException("El torneo no puede ser nulo.");
@@ -387,8 +369,6 @@ public class ClubDeportivoSeneca implements Serializable {
 		return "T-" + numero;
 	}
 
-=======
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 	public void setMaximoInstalaciones(String disciplina, int maximo) {
 		maximoInstalacionesPorDisciplina.put(disciplina.toUpperCase(), maximo);
 	}
@@ -401,10 +381,7 @@ public class ClubDeportivoSeneca implements Serializable {
 	public List<TurnoEmpleado> getTurnos() { return turnos; }
 	public List<SesionDeEntrenamiento> getSesiones() { return sesiones; }
 	public List<InscripcionDisciplinaIndividual> getInscripcionesIndividuales() { return inscripcionesIndividuales; }
-<<<<<<< HEAD
 	public List<Torneo> getTorneos() { return torneos; }
-=======
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 	public TiendaDeportiva getTienda() { return tienda; }
 	public Cafeteria getCafeteria() { return cafeteria; }
 	public UbicacionInventario getBodegaCentral() { return bodegaCentral; }

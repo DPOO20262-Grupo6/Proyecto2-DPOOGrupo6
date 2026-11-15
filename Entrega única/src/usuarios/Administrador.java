@@ -21,7 +21,6 @@ import deportesDeConjunto.ResultadoPartidoEquipo;
 import inscripciones.InscripcionEquipo;
 import inscripciones.InscripcionEquipoFutbol;
 import inventario.UbicacionInventario;
-<<<<<<< HEAD
 import Torneos.Torneo;
 import Torneos.TorneoEquipo;
 import Torneos.TorneoIndividual;
@@ -31,8 +30,6 @@ import enumeraciones.EstadoTorneo;
 import enumeraciones.Modalidad;
 import enumeraciones.TipoTorneo;
 import estadisticas.EstadisticasPartidoIndividual;
-=======
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 
 public class Administrador extends Usuario {
 	
@@ -138,7 +135,6 @@ public class Administrador extends Usuario {
 			sugerencia.rechazar();
 		}
 	}
-<<<<<<< HEAD
 
 	// ---------------- Torneos internos (HU-A01 a HU-A06) ----------------
 
@@ -231,6 +227,3 @@ public class Administrador extends Usuario {
 		((TorneoIndividual) torneo).registrarResultado(partido, resultado);
 	}
 }
-=======
-}
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
