@@ -1,0 +1,824 @@
+@startuml ClubDeportivoSeneca_Diseno
+' Si tu visor dibuja distinto la distribución, quita el apóstrofe de la siguiente línea:
+' !pragma layout smetana
+' Evita que el PNG se recorte: si el diagrama es más ancho que el límite, se reduce para que quepa
+scale max 4000 width
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam nodesep 45
+skinparam ranksep 70
+
+' =====================================================
+' CLASE RAÍZ: unifica todo el sistema
+' =====================================================
+class ClubDeportivoSeneca {
+  -maximoInstalacionesPorDisciplina : Map<String, Integer>
+  +autenticarUsuario(login : String, password : String) : Usuario
+  +registrarSocio(socio : Socio) : void
+  +registrarEmpleado(empleado : EmpleadoDelClub) : void
+  +buscarSocio(login : String) : Socio
+  +buscarEquipo(nombre : String) : Equipo
+  +agregarTorneo(torneo : Torneo) : void
+  +buscarTorneo(id : String) : Torneo
+  +reservarInstalacion(socios : List<Socio>, cancha : CanchaDeporteIndividual, fecha : LocalDate, horaInicio : LocalTime, horaFin : LocalTime, modalidad : Modalidad) : ReservaInstalacionDeporteIndividual
+  +contarInstalacionesOcupadas(disciplina : String, fecha : LocalDate, horaInicio : LocalTime, horaFin : LocalTime) : int
+  +verificarCoberturaMinima(fecha : LocalDate, hora : LocalTime) : boolean
+  +generarReporteVentas(rubro : String, fechaInicio : LocalDate, fechaFin : LocalDate) : String
+  +generarReporteGoleadores(competencia : Competencia) : String
+  +generarReporteAsistencia(fechaInicio : LocalDate, fechaFin : LocalDate) : String
+  +generarReporteEvolucionElo(disciplina : String) : String
+  +cargarDatos(carpeta : String) : void
+  +guardarDatos(carpeta : String) : void
+}
+
+' =====================================================
+' ENUMERACIONES
+' =====================================================
+package "Enumeraciones" {
+enum Modalidad {
+  SENCILLOS
+  DOBLES
+}
+enum NivelHabilidad {
+  PRINCIPIANTE
+  INTERMEDIO
+  AVANZADO
+}
+enum EstadoAsistencia {
+  ASISTIO
+  FALTO
+  LLEGO_TARDE
+}
+enum EstadoSolicitud {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+enum TipoTarjeta {
+  AMARILLA
+  ROJA
+}
+enum MotivoSuspension {
+  ACUMULACION_AMARILLAS
+  ROJA
+}
+enum TipoTorneo {
+  RECREATIVO
+  COMPETITIVO
+}
+enum EstadoTorneo {
+  EN_CURSO
+  FINALIZADO
+}
+}
+
+' =====================================================
+' BLOQUE 1: USUARIOS
+' =====================================================
+package "Usuarios" {
+  abstract class Usuario {
+    -login : String
+    -password : String
+    -nombre : String
+    +verificarCredenciales(login : String, password : String) : boolean
+  }
+
+  class Socio {
+    -fechaNacimiento : LocalDate
+    -puntosDeFidelidad : int
+    +inscribirseDisciplina(disciplina : String, nivel : NivelHabilidad) : InscripcionDisciplinaIndividual
+    +calcularEdad(fecha : LocalDate) : int
+    +consultarHistorialPartidos() : List<String>
+    +consultarEstadisticasAcumuladas() : String
+    +consultarAsistencias() : List<RegistroAsistencia>
+    +consultarSanciones() : List<Suspension>
+    +acumularPuntos(cantidad : int) : void
+    +redimirPuntos(cantidad : int) : void
+  }
+
+  abstract class EmpleadoDelClub {
+    -codigoDescuento : String
+    -puntosDeFidelidad : int
+    +{static} DESCUENTO_PROPIO : double = 0.15
+    +{static} DESCUENTO_TERCEROS : double = 0.08
+    +getPorcentajeDescuentoPropio() : double
+    +generarCodigoDescuento() : String
+    +proponerSugerencia(nombre : String, precio : double, detalle : String) : Sugerencia
+    +solicitarCambioTurno(turno : TurnoEmpleado, nuevaFecha : LocalDate, nuevaHora : LocalTime) : SolicitudCambioTurnoEmpleado
+    +acumularPuntos(cantidad : int) : void
+    +redimirPuntos(cantidad : int) : void
+  }
+
+  class Entrenador {
+    +planearSesion(fecha : LocalDate, hora : LocalTime, duracion : int, instalacion : InstalacionDeportiva, convocados : List<Socio>) : SesionDeEntrenamiento
+    +tieneConflictoHorario(fecha : LocalDate, hora : LocalTime, duracion : int) : boolean
+    +registrarAsistencia(sesion : SesionDeEntrenamiento, socio : Socio, estado : EstadoAsistencia, nota : Integer, comentario : String) : void
+  }
+  class Fisioterapeuta
+  class Administrador {
+    +crearEquipo(tipo : String, nombre : String, categoria : String, cupo : int) : Equipo
+    +darDeBajaEquipo(equipo : Equipo) : void
+    +inscribirJugador(equipo : Equipo, socio : Socio, posicion : String, numeroCamiseta : int) : InscripcionEquipo
+    +darDeBajaJugador(equipo : Equipo, inscripcion : InscripcionEquipo) : void
+    +inscribirEquipoEnCompetencia(equipo : Equipo, competencia : Competencia, jugadores : List<InscripcionEquipo>) : NominaCompetencia
+    +programarPartidoInterno(local : Equipo, visitante : Equipo, fecha : LocalDate) : PartidoInterno
+    +registrarResultado(partido : PartidoDeEquipo, resultado : ResultadoPartidoEquipo) : void
+    +asignarTurno(empleado : EmpleadoDelClub, fecha : LocalDate, hora : LocalTime, duracion : int) : TurnoEmpleado
+    +evaluarSolicitudCambio(solicitud : SolicitudCambioTurnoEmpleado) : void
+    +reabastecer(articulo : Articulo, ubicacion : UbicacionInventario, cantidad : int) : void
+    +trasladarArticulo(articulo : Articulo, origen : UbicacionInventario, destino : UbicacionInventario, cantidad : int) : void
+    +evaluarSugerencia(sugerencia : Sugerencia, aprobada : boolean) : void
+    +crearTorneo(nombre : String, deporte : String, modalidad : Modalidad, categoria : String, cupos : int, tipo : TipoTorneo, fechaInicio : LocalDate, tarifa : double, bono : double) : Torneo
+    +consultarEstadoTorneo(id : String) : EstadoTorneo
+    +consultarHistorialTorneo(id : String) : String
+    +finalizarTorneo(id : String) : void
+    +registrarResultadoTorneo(id : String, partido : PartidoTorneo, resultado : ResultadoPartidoEquipo) : void
+  }
+
+  Usuario <|-- Socio
+  Usuario <|-- EmpleadoDelClub
+  Usuario <|-- Administrador
+  EmpleadoDelClub <|-- Entrenador
+  EmpleadoDelClub <|-- Fisioterapeuta
+}
+
+' =====================================================
+' BLOQUE 2: INSCRIPCIONES
+' =====================================================
+package "Inscripciones" {
+  class InscripcionEquipo {
+    -posicion : String
+    -numeroCamiseta : int
+    +estaHabilitado() : boolean
+  }
+
+  class InscripcionEquipoFutbol {
+    +getTarjetasAmarillasAcumuladasInterno() : int
+    +estaSuspendidoInterno() : boolean
+    +agregarSuspension(suspension : Suspension) : void
+    +estaHabilitado() : boolean
+  }
+
+  class InscripcionDisciplinaIndividual {
+    -disciplina : String
+    -nivel : NivelHabilidad
+    -rankingElo : double
+    +esNivelCompatible(otra : InscripcionDisciplinaIndividual) : boolean
+    +actualizarRankingElo(rankingRival : double, gano : boolean) : void
+  }
+
+  InscripcionEquipo <|-- InscripcionEquipoFutbol
+}
+
+Socio "1" -- "0..*" InscripcionEquipo : realiza >
+Socio "1" -- "0..*" InscripcionDisciplinaIndividual : realiza >
+
+' =====================================================
+' BLOQUE 3: DEPORTES DE CONJUNTO Y COMPETENCIAS
+' =====================================================
+package "DeportesDeConjunto" {
+  abstract class Equipo {
+    -categoria : String
+    -nombre : String
+    -cupoMaximoJugadores : int
+    +agregarJugador(inscripcion : InscripcionEquipo) : void
+    +retirarJugador(inscripcion : InscripcionEquipo) : void
+    +validarCategoria(socio : Socio) : boolean
+    +numeroCamisetaDisponible(numero : int) : boolean
+    +contarJugadoresHabilitados() : int
+    +cumpleMinimoJugadores() : boolean
+    +{abstract} getMinimoJugadoresHabilitados() : int
+    +{abstract} getDeporte() : String
+    +{abstract} crearEstadisticas() : EstadisticasPartidoDeEquipo
+    +{abstract} crearResultado() : ResultadoPartidoEquipo
+    +{abstract} calcularPuntosLiga(resultado : ResultadoPartidoEquipo) : int
+  }
+
+  class EquipoFutbol {
+    +{static} MINIMO_JUGADORES_HABILITADOS : int = 7
+    +{static} DEPORTE : String = "FUTBOL"
+    +getMinimoJugadoresHabilitados() : int
+    +getDeporte() : String
+    +crearEstadisticas() : EstadisticasPartidoDeEquipo
+    +crearResultado() : ResultadoPartidoEquipo
+    +calcularPuntosLiga(resultado : ResultadoPartidoEquipo) : int
+  }
+  class EquipoBaloncesto {
+    +{static} MINIMO_JUGADORES_HABILITADOS : int = 5
+    +{static} DEPORTE : String = "BALONCESTO"
+    +getMinimoJugadoresHabilitados() : int
+    +getDeporte() : String
+    +crearEstadisticas() : EstadisticasPartidoDeEquipo
+    +crearResultado() : ResultadoPartidoEquipo
+    +calcularPuntosLiga(resultado : ResultadoPartidoEquipo) : int
+  }
+  class EquipoVoleibol {
+    +{static} MINIMO_JUGADORES_HABILITADOS : int = 6
+    +{static} DEPORTE : String = "VOLEIBOL"
+    +getMinimoJugadoresHabilitados() : int
+    +getDeporte() : String
+    +crearEstadisticas() : EstadisticasPartidoDeEquipo
+    +crearResultado() : ResultadoPartidoEquipo
+    +calcularPuntosLiga(resultado : ResultadoPartidoEquipo) : int
+  }
+
+  Equipo <|-- EquipoFutbol
+  Equipo <|-- EquipoBaloncesto
+  Equipo <|-- EquipoVoleibol
+
+  abstract class Competencia {
+    -nombre : String
+    -entidadOrganizadora : String
+    -añoTemporada : int
+    -deporte : String
+    -categoriaHabilitada : String
+    -jugadoresMinimosNomina : int
+    +inscribirEquipo(equipo : Equipo, jugadores : List<InscripcionEquipo>) : NominaCompetencia
+    +validarCategoria(equipo : Equipo) : boolean
+    +estaEnNomina(inscripcion : InscripcionEquipo) : boolean
+  }
+
+  class TorneoDeLosCerros {
+    +getTablaPosiciones() : List<NominaCompetencia>
+  }
+  class Ascun {
+    -faseActual : String
+    +avanzarFase() : void
+    +definirClasificados() : List<Equipo>
+  }
+
+  Competencia <|-- TorneoDeLosCerros
+  Competencia <|-- Ascun
+
+  class FormatoLiga {
+    +programarPartido(equipo : Equipo, rival : String, fecha : LocalDate, escenario : String) : PartidoDeCompetencia
+    +actualizarTabla(partido : PartidoDeCompetencia) : void
+    +getTablaOrdenada() : List<NominaCompetencia>
+  }
+  class FaseEliminacionDirecta {
+    +programarLlave(equipo : Equipo, rival : String, fecha : LocalDate) : PartidoDeCompetencia
+    +obtenerGanador(partido : PartidoDeCompetencia) : Equipo
+  }
+
+  class NominaCompetencia {
+    -fechaInscripcion : LocalDate
+    -puntosAcumulados : int
+    -partidosGanados : int
+    +agregarJugador(inscripcion : InscripcionEquipo) : JugadorEnNomina
+    +cumpleNominaMinima() : boolean
+    +sumarPuntos(puntos : int) : void
+    +registrarPartidoGanado() : void
+  }
+  class JugadorEnNomina {
+    +estaHabilitado() : boolean
+  }
+  class JugadorEnNominaFutbol {
+    +getTarjetasAmarillasAcumuladasCompetencia() : int
+    +estaSuspendidoCompetencia() : boolean
+    +agregarSuspension(suspension : Suspension) : void
+    +estaHabilitado() : boolean
+  }
+  JugadorEnNomina <|-- JugadorEnNominaFutbol
+
+  abstract class PartidoDeEquipo {
+    -fecha : LocalDate
+    -deporte : String
+    +registrarParticipacion(inscripcion : InscripcionEquipo) : void
+    +registrarEstadisticas(inscripcion : InscripcionEquipo, estadisticas : EstadisticasPartidoDeEquipo) : void
+    +registrarResultado(resultado : ResultadoPartidoEquipo) : void
+    +{abstract} validarCuorum() : boolean
+    +getGanador() : Equipo
+  }
+  class PartidoInterno {
+    +validarEquipos() : boolean
+    +validarCuorum() : boolean
+  }
+  class PartidoDeCompetencia {
+    -institucionRival : String
+    -escenario : String
+    -esLocal : boolean
+    +validarAlineacion(inscripcion : InscripcionEquipo) : boolean
+    +validarCuorum() : boolean
+  }
+  class PartidoTorneo {
+    +validarEquipos() : boolean
+    +validarCuorum() : boolean
+    #procesarTarjetasYSuspensiones(inscripcion : InscripcionEquipo, estadisticas : EstadisticasPartidoDeEquipo) : void
+    +getGanador() : Equipo
+    +participa(equipo : Equipo) : boolean
+    +toString() : String
+  }
+  PartidoDeEquipo <|-- PartidoInterno
+  PartidoDeEquipo <|-- PartidoDeCompetencia
+  PartidoDeEquipo <|-- PartidoTorneo
+
+  abstract class ResultadoPartidoEquipo {
+    +{abstract} getGanador() : String
+    +{abstract} esEmpate() : boolean
+  }
+  class ResultadoPorPuntos {
+    -puntosLocal : int
+    -puntosVisitante : int
+    +getGanador() : String
+    +esEmpate() : boolean
+  }
+  class ResultadoVoleibol {
+    +agregarSet(set : SetVoleibol) : void
+    +getSetsGanadosLocal() : int
+    +getSetsGanadosVisitante() : int
+    +getGanador() : String
+    +esEmpate() : boolean
+  }
+  class SetVoleibol {
+    -numeroSet : int
+    -puntosLocal : int
+    -puntosVisitante : int
+    +getGanadorSet() : String
+  }
+  ResultadoPartidoEquipo <|-- ResultadoPorPuntos
+  ResultadoPartidoEquipo <|-- ResultadoVoleibol
+
+  PartidoDeEquipo "1" *-- "0..1" ResultadoPartidoEquipo : registra >
+  ResultadoVoleibol "1" *-- "3..5" SetVoleibol : se compone de >
+}
+
+' -- Relaciones del bloque 3 --
+Equipo "1" -- "0..*" InscripcionEquipo : pertenece a <
+' NominaCompetencia: una por cada par (Equipo, Competencia)
+Equipo "0..*" -- "0..*" Competencia : participa en >
+(Equipo, Competencia) .. NominaCompetencia
+
+' JugadorEnNomina: una por cada par (NominaCompetencia, InscripcionEquipo)
+NominaCompetencia "0..*" -- "1..*" InscripcionEquipo : habilita >
+(NominaCompetencia, InscripcionEquipo) .. JugadorEnNomina
+
+TorneoDeLosCerros "0..1" -- "1" FormatoLiga : se juega con >
+Ascun "0..1" -- "0..*" FormatoLiga : agrupa >
+Ascun "1" -- "0..*" FaseEliminacionDirecta : define >
+FormatoLiga "0..1" -- "0..*" PartidoDeCompetencia : programa >
+FaseEliminacionDirecta "0..1" -- "0..*" PartidoDeCompetencia : programa >
+FormatoLiga "1" -- "0..*" NominaCompetencia : compite en <
+
+Equipo "1" -- "0..*" PartidoInterno : es local en >
+Equipo "1" -- "0..*" PartidoInterno : es visitante en >
+
+Equipo "1" -- "0..*" PartidoDeCompetencia : disputa >
+
+' =====================================================
+' BLOQUE 4: ESTADISTICAS Y SANCIONES
+' =====================================================
+package "Estadisticas" {
+  abstract class EstadisticasPartidoDeEquipo {
+    +{abstract} getResumen() : String
+  }
+  class EstadisticasPartidoFutbol {
+    -goles : int
+    -asistencias : int
+    +registrarGol() : void
+    +registrarAsistencia() : void
+    +registrarTarjeta(tipo : TipoTarjeta, minuto : int) : Tarjeta
+    +getTarjetasAmarillas() : int
+    +getTarjetasRojas() : int
+    +getResumen() : String
+  }
+  class EstadisticasPartidoBaloncesto {
+    -puntos : int
+    -rebotes : int
+    +registrarPuntos(cantidad : int) : void
+    +registrarRebote() : void
+    +getResumen() : String
+  }
+  class EstadisticasPartidoVoleibol {
+    -aces : int
+    -bloqueos : int
+    +registrarAce() : void
+    +registrarBloqueo() : void
+    +getResumen() : String
+  }
+  EstadisticasPartidoDeEquipo <|-- EstadisticasPartidoFutbol
+  EstadisticasPartidoDeEquipo <|-- EstadisticasPartidoBaloncesto
+  EstadisticasPartidoDeEquipo <|-- EstadisticasPartidoVoleibol
+
+  abstract class EstadisticasPartidoIndividual {
+    +{abstract} getResumen() : String
+    +{abstract} esGanador() : boolean
+  }
+  class EstadisticasPartidoTenis {
+    -setsGanados : int
+    -gamesGanados : int
+    -aces : int
+    -erroresNoForzados : int
+    +getResumen() : String
+    +esGanador() : boolean
+  }
+  class EstadisticasPartidoPadel {
+    -setsGanados : int
+    -gamesGanados : int
+    -aces : int
+    -erroresNoForzados : int
+    +getResumen() : String
+    +esGanador() : boolean
+  }
+  class EstadisticasPartidoTenisDeMesa {
+    -setsGanados : int
+    -puntosTotales : int
+    +getResumen() : String
+    +esGanador() : boolean
+  }
+  EstadisticasPartidoIndividual <|-- EstadisticasPartidoTenis
+  EstadisticasPartidoIndividual <|-- EstadisticasPartidoPadel
+  EstadisticasPartidoIndividual <|-- EstadisticasPartidoTenisDeMesa
+
+  class Tarjeta {
+    -tipo : TipoTarjeta
+    -minuto : int
+    +esRoja() : boolean
+  }
+  class Suspension {
+    -motivo : MotivoSuspension
+    -cumplida : boolean
+    +cumplir() : void
+    +seCumpleEn(partido : PartidoDeEquipo) : boolean
+  }
+
+  EstadisticasPartidoFutbol "1" *-- "0..*" Tarjeta : recibe >
+  Tarjeta "1..2" -- "0..1" Suspension : origina >
+}
+
+Suspension "0..*" -- "0..1" PartidoDeEquipo : se cumple en >
+InscripcionEquipoFutbol "0..1" -- "0..*" Suspension : acumula (interno) >
+JugadorEnNominaFutbol "0..1" -- "0..*" Suspension : acumula (competencia) >
+
+PartidoDeEquipo "0..*" -- "5..*" InscripcionEquipo : participa en <
+(PartidoDeEquipo, InscripcionEquipo) .. EstadisticasPartidoDeEquipo
+
+' =====================================================
+' BLOQUE 5: INSTALACIONES Y DEPORTES INDIVIDUALES
+' =====================================================
+package "Instalaciones" {
+  abstract class InstalacionDeportiva {
+    -nombre : String
+    +estaDisponible(fecha : LocalDate, horaInicio : LocalTime, horaFin : LocalTime) : boolean
+  }
+  abstract class CanchaDeporteIndividual {
+    -capacidad : int
+    +admiteCantidadJugadores(cantidad : int, modalidad : Modalidad) : boolean
+    +permiteBebidaCaliente() : boolean
+  }
+  class CanchaTenis {
+    +admiteCantidadJugadores(cantidad : int, modalidad : Modalidad) : boolean
+  }
+  class CanchaPadel {
+    -techada : boolean
+    +{static} CAPACIDAD : int = 4
+    +admiteCantidadJugadores(cantidad : int, modalidad : Modalidad) : boolean
+    +permiteBebidaCaliente() : boolean
+  }
+  class CanchaTenisDeMesa {
+    -techada : boolean
+    +admiteCantidadJugadores(cantidad : int, modalidad : Modalidad) : boolean
+    +permiteBebidaCaliente() : boolean
+  }
+  class InstalacionDeporteConjunto
+
+  InstalacionDeportiva <|-- CanchaDeporteIndividual
+  InstalacionDeportiva <|-- InstalacionDeporteConjunto
+  CanchaDeporteIndividual <|-- CanchaTenis
+  CanchaDeporteIndividual <|-- CanchaPadel
+  CanchaDeporteIndividual <|-- CanchaTenisDeMesa
+}
+
+package "DeportesIndividuales" {
+  abstract class PartidoDeporteIndividual {
+    -fecha : LocalDate
+    -horaInicio : LocalTime
+    -horaFin : LocalTime
+    -modalidad : Modalidad
+    +agregarParticipante(inscripcion : InscripcionDisciplinaIndividual) : void
+    +validarNiveles() : boolean
+    +validarModalidad() : boolean
+    +getCantidadJugadoresRequerida() : int
+    +registrarEstadisticas(inscripcion : InscripcionDisciplinaIndividual, estadisticas : EstadisticasPartidoIndividual) : void
+    +finalizar() : void
+    +{abstract} crearEstadisticas() : EstadisticasPartidoIndividual
+  }
+  class PartidoTenis {
+    +crearEstadisticas() : EstadisticasPartidoIndividual
+  }
+  class PartidoPadel {
+    +validarModalidad() : boolean
+    +crearEstadisticas() : EstadisticasPartidoIndividual
+  }
+  class PartidoTenisDeMesa {
+    +crearEstadisticas() : EstadisticasPartidoIndividual
+  }
+  PartidoDeporteIndividual <|-- PartidoTenis
+  PartidoDeporteIndividual <|-- PartidoPadel
+  PartidoDeporteIndividual <|-- PartidoTenisDeMesa
+
+  class ReservaInstalacionDeporteIndividual {
+    -fecha : LocalDate
+    -horaInicio : LocalTime
+    -horaFin : LocalTime
+    -cantidadJugadores : int
+    -modalidad : Modalidad
+    -estado : String
+    +confirmar() : void
+    +rechazar(motivo : String) : void
+    +seCruzaCon(fecha : LocalDate, horaInicio : LocalTime, horaFin : LocalTime) : boolean
+  }
+}
+
+PartidoDeporteIndividual "0..*" -- "1" CanchaDeporteIndividual : se juega en >
+InscripcionDisciplinaIndividual "2..4" -- "0..*" PartidoDeporteIndividual : participa en >
+(PartidoDeporteIndividual, InscripcionDisciplinaIndividual) .. EstadisticasPartidoIndividual
+
+ReservaInstalacionDeporteIndividual "0..*" -- "1" CanchaDeporteIndividual : aparta >
+Socio "1..*" -- "0..*" ReservaInstalacionDeporteIndividual : solicita >
+
+' =====================================================
+' BLOQUE 6: ENTRENAMIENTO
+' =====================================================
+package "Entrenamiento" {
+  class SesionDeEntrenamiento {
+    -fecha : LocalDate
+    -hora : LocalTime
+    -duracion : int
+    +convocar(socio : Socio) : void
+    +seCruzaCon(fecha : LocalDate, hora : LocalTime, duracion : int) : boolean
+    +registrarAsistencia(socio : Socio, estado : EstadoAsistencia, nota : Integer, comentario : String) : void
+  }
+  class RegistroAsistencia {
+    -estadoAsistencia : EstadoAsistencia
+    -notaDesempeño : Integer
+    -comentario : String
+    +validarNota(nota : int) : boolean
+  }
+}
+
+Entrenador "1" -- "0..*" SesionDeEntrenamiento : planea >
+Socio "1..*" -- "0..*" SesionDeEntrenamiento : convoca <
+(SesionDeEntrenamiento, Socio) .. RegistroAsistencia
+SesionDeEntrenamiento "0..*" -- "1" InstalacionDeportiva : se realiza en >
+
+' =====================================================
+' BLOQUE 7: ARTICULOS, TIENDA, CAFETERIA E INVENTARIO
+' =====================================================
+package "ArticulosYVentas" {
+  abstract class Articulo {
+    -nombre : String
+    -precio : double
+    +getPrecio() : double
+  }
+  class ArticuloDeportivo {
+    -categoria : String
+  }
+  class Bebida {
+    -caliente : boolean
+    +esCaliente() : boolean
+  }
+  class Snack {
+    -alergenos : List<String>
+    +getAlergenos() : List<String>
+  }
+  Articulo <|-- ArticuloDeportivo
+  Articulo <|-- Bebida
+  Articulo <|-- Snack
+
+  class TiendaDeportiva {
+    +venderArticulos(comprador : Usuario, articulosYCantidades : Map<ArticuloDeportivo, Integer>, codigoDescuento : String) : VentaTienda
+    +verificarExistencias(articulo : Articulo, cantidad : int) : boolean
+  }
+  class Cafeteria {
+    +venderProductos(comprador : Usuario, productosYCantidades : Map<Articulo, Integer>, porcentajePropina : double, puntosARedimir : int, instalacionDelComprador : InstalacionDeportiva) : VentaCafeteria
+    +informarAlergenos(productos : List<Articulo>) : String
+  }
+
+  abstract class Venta {
+    -fecha : LocalDate
+    -valorTotal : double
+    -descuentoAplicado : double
+    -puntosFidelidadGenerados : int
+    -puntosFidelidadUtilizados : int
+    +{static} PORCENTAJE_PUNTOS : double = 0.02
+    +agregarDetalle(articulo : Articulo, cantidad : int) : void
+    +calcularSubtotal() : double
+    +aplicarDescuento(porcentaje : double) : void
+    +redimirPuntos(puntos : int) : void
+    +{abstract} calcularImpuestos() : double
+    +calcularTotal() : double
+    +calcularPuntosGenerados() : int
+  }
+  class VentaTienda {
+    +{static} IVA : double = 0.19
+    +calcularImpuestos() : double
+  }
+  class VentaCafeteria {
+    +{static} IMPUESTO_CONSUMO : double = 0.08
+    -porcentajePropina : double = 0.10
+    +calcularImpuestos() : double
+    +setPorcentajePropina(porcentaje : double) : void
+    +calcularPropina() : double
+  }
+  Venta <|-- VentaTienda
+  Venta <|-- VentaCafeteria
+
+  class DetalleVenta {
+    -cantidadArticulo : int
+    -precioUnitario : double
+    +calcularSubtotal() : double
+  }
+}
+
+package "Inventario" {
+  class UbicacionInventario {
+    -nombre : String
+    -tipo : String
+    +obtenerCantidad(articulo : Articulo) : int
+    +agregarExistencias(articulo : Articulo, cantidad : int) : void
+    +retirarExistencias(articulo : Articulo, cantidad : int) : void
+  }
+  class RegistroInventario {
+    -cantidad : int
+    +aumentar(cantidad : int) : void
+    +disminuir(cantidad : int) : void
+  }
+}
+
+TiendaDeportiva "1" -- "0..*" ArticuloDeportivo : ofrece >
+Cafeteria "1" -- "0..*" Bebida : ofrece >
+Cafeteria "1" -- "0..*" Snack : ofrece >
+TiendaDeportiva "0..1" -- "0..*" Venta : registra >
+Cafeteria "0..1" -- "0..*" Venta : registra >
+
+Venta "0..*" -- "1..*" Articulo : incluye >
+(Venta, Articulo) .. DetalleVenta
+
+Usuario "1" -- "0..*" Venta : efectúa >
+
+Articulo "0..*" -- "0..*" UbicacionInventario : se almacena en >
+(Articulo, UbicacionInventario) .. RegistroInventario
+
+' =====================================================
+' BLOQUE 8: ADMINISTRACION
+' =====================================================
+package "Administracion" {
+  class TurnoEmpleado {
+    -fecha : LocalDate
+    -hora : LocalTime
+    -duracion : int
+    +seCruzaCon(fecha : LocalDate, hora : LocalTime) : boolean
+    +reprogramar(nuevaFecha : LocalDate, nuevaHora : LocalTime) : void
+  }
+  class SolicitudCambioTurnoEmpleado {
+    -estado : EstadoSolicitud
+    -fechaSolicitud : LocalDate
+    -nuevaFecha : LocalDate
+    -nuevaHora : LocalTime
+    +aprobar() : void
+    +rechazar() : void
+  }
+  abstract class Sugerencia {
+    -nombrePropuesto : String
+    -precioPropuesto : double
+    -estado : EstadoSolicitud
+    +aprobar() : void
+    +rechazar() : void
+    +{abstract} convertirEnArticulo() : Articulo
+  }
+  class SugerenciaArticulo {
+    -categoriaPropuesta : String
+    +convertirEnArticulo() : Articulo
+  }
+  class SugerenciaSnack {
+    -alergenosPropuestos : List<String>
+    +convertirEnArticulo() : Articulo
+  }
+  Sugerencia <|-- SugerenciaArticulo
+  Sugerencia <|-- SugerenciaSnack
+}
+
+Administrador "1" -- "0..*" TurnoEmpleado : asigna >
+Administrador "1" -- "0..*" Sugerencia : evalúa >
+EmpleadoDelClub "1" -- "0..*" Sugerencia : propone >
+TurnoEmpleado "0..*" -- "1" EmpleadoDelClub : cumple <
+SolicitudCambioTurnoEmpleado "0..*" -- "1" TurnoEmpleado : pide cambiar >
+
+' =====================================================
+' BLOQUE 9: TORNEOS INTERNOS (Proyecto 2)
+' =====================================================
+package "Torneos" {
+  abstract class Torneo {
+    -id : String
+    -nombre : String
+    -deporte : String
+    -categoria : String
+    -cuposTotales : int
+    -/cuposPreferenciales : int
+    #cuposPreferencialesOcupados : int
+    -cuposPreferencialesLiberados : boolean
+    -tipo : TipoTorneo
+    -estado : EstadoTorneo
+    -fechaInicio : LocalDate
+    -tarifaInscripcion : double
+    -valorBono : double
+    -premioEntregado : String
+    +calcularCuposPreferenciales() : int
+    +cuposDisponibles() : int
+    +cuposPreferencialesDisponibles() : int
+    +cuposRegularesDisponibles() : int
+    +haIniciado() : boolean
+    +finalizar() : void
+    +entregarPremio() : void
+    +getEstado() : EstadoTorneo
+    +consultarHistorial() : String
+    +{abstract} getTablaPosiciones() : List<String>
+    +{abstract} getGanador() : Object
+    +{abstract} getNombreGanador() : String
+    +{abstract} getNumeroInscritos() : int
+    #{abstract} getNombresParticipantes() : List<String>
+    #{abstract} getDescripcionEncuentros() : List<String>
+  }
+
+  class TorneoIndividual {
+    -modalidad : Modalidad
+    +inscribir(participante : InscripcionDisciplinaIndividual) : boolean
+    +retirar(participante : InscripcionDisciplinaIndividual) : boolean
+    +estaInscrito(participante : InscripcionDisciplinaIndividual) : boolean
+    +programarPartido(jugadores : List<InscripcionDisciplinaIndividual>, fecha : LocalDate, horaInicio : LocalTime, horaFin : LocalTime, cancha : CanchaDeporteIndividual) : PartidoDeporteIndividual
+    -crearPartido(fecha : LocalDate, horaInicio : LocalTime, horaFin : LocalTime, cancha : CanchaDeporteIndividual) : PartidoDeporteIndividual
+    +registrarResultado(partido : PartidoDeporteIndividual, estadisticas : List<EstadisticasPartidoIndividual>) : void
+    +contarVictorias(participante : InscripcionDisciplinaIndividual) : int
+    +getParticipantesOrdenados() : List<InscripcionDisciplinaIndividual>
+    +getTablaPosiciones() : List<String>
+    +getGanador() : InscripcionDisciplinaIndividual
+    +getNombreGanador() : String
+    +getNumeroInscritos() : int
+    #getNombresParticipantes() : List<String>
+    #getDescripcionEncuentros() : List<String>
+  }
+
+  class TorneoEquipo {
+    +inscribir(equipo : Equipo) : boolean
+    +retirar(equipo : Equipo) : boolean
+    +estaInscrito(equipo : Equipo) : boolean
+    +programarPartido(local : Equipo, visitante : Equipo, fecha : LocalDate) : PartidoTorneo
+    +registrarResultado(partido : PartidoTorneo, resultado : ResultadoPartidoEquipo) : void
+    +getEquiposOrdenados() : List<Equipo>
+    +getTablaPosiciones() : List<String>
+    +getGanador() : Equipo
+    +getNombreGanador() : String
+    -hayResultados() : boolean
+    +getNumeroInscritos() : int
+    #getNombresParticipantes() : List<String>
+    #getDescripcionEncuentros() : List<String>
+  }
+
+  Torneo <|-- TorneoIndividual
+  Torneo <|-- TorneoEquipo
+}
+
+' -- Relaciones del bloque 9 --
+TorneoEquipo "1" *-- "0..*" PartidoTorneo : se compone de >
+' 0..1: un partido individual puede jugarse fuera de un torneo (partidos de práctica)
+TorneoIndividual "0..1" *-- "0..*" PartidoDeporteIndividual : se compone de >
+
+TorneoEquipo "0..*" -- "0..*" Equipo : inscribe >
+TorneoIndividual "0..*" -- "0..*" InscripcionDisciplinaIndividual : inscribe >
+
+Equipo "1" -- "0..*" PartidoTorneo : es local en >
+Equipo "1" -- "0..*" PartidoTorneo : es visitante en >
+
+Administrador "1" -- "0..*" Torneo : organiza >
+
+' =====================================================
+' RELACIONES DE LA CLASE RAÍZ ClubDeportivoSeneca
+' =====================================================
+ClubDeportivoSeneca "1" *-- "1" Cafeteria : tiene >
+ClubDeportivoSeneca "1" *-- "1" TiendaDeportiva : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" InstalacionDeportiva : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" Socio : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" EmpleadoDelClub : tiene >
+ClubDeportivoSeneca "1" *-- "1" Administrador : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" Equipo : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" SesionDeEntrenamiento : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" ReservaInstalacionDeporteIndividual : tiene >
+ClubDeportivoSeneca "1" *-- "0..*" Torneo : tiene >
+
+' =====================================================
+' LAYOUT: enlaces ocultos (solo acomodan el dibujo, no son relaciones del modelo)
+' =====================================================
+Fisioterapeuta -[hidden]down- Sugerencia
+Entrenador -[hidden]down- SesionDeEntrenamiento
+InscripcionEquipoFutbol -[hidden]down- EstadisticasPartidoDeEquipo
+PartidoDeEquipo -[hidden]down- EstadisticasPartidoDeEquipo
+InscripcionDisciplinaIndividual -[hidden]down- PartidoDeporteIndividual
+PartidoTenisDeMesa -[hidden]down- InstalacionDeportiva
+SugerenciaArticulo -[hidden]down- TiendaDeportiva
+SugerenciaSnack -[hidden]down- Cafeteria
+TurnoEmpleado -[hidden]down- TiendaDeportiva
+PartidoDeCompetencia -[hidden]down- EstadisticasPartidoDeEquipo
+NominaCompetencia -[hidden]down- EstadisticasPartidoIndividual
+
+@enduml
