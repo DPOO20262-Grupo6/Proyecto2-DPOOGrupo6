@@ -3,6 +3,8 @@ package usuarios;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.time.YearMonth;
+import administracion.PagoMensualidad;
 import administracion.SolicitudCambioTurnoEmpleado;
 import administracion.Sugerencia;
 import administracion.TurnoEmpleado;
@@ -40,6 +42,64 @@ public class Administrador extends Usuario {
 	public Administrador(String nombre, String login, String password, ClubDeportivoSeneca club) {
 		super(nombre, login, password);
 		this.club = club;
+	}
+
+	/** HU-A02 */
+	public Socio registrarSocio(String nombre, String documento, LocalDate fechaNacimiento, String login, String password) {
+		if (estaVacio(nombre)) {
+			throw new IllegalArgumentException("Falta el nombre del socio.");
+		}
+		if (estaVacio(documento)) {
+			throw new IllegalArgumentException("Falta el documento del socio.");
+		}
+		if (fechaNacimiento == null) {
+			throw new IllegalArgumentException("Falta la fecha de nacimiento del socio.");
+		}
+		if (estaVacio(login)) {
+			throw new IllegalArgumentException("Falta el login del socio.");
+		}
+		if (estaVacio(password)) {
+			throw new IllegalArgumentException("Falta la contrasena del socio.");
+		}
+		if (fechaNacimiento.isAfter(LocalDate.now())) {
+			throw new IllegalArgumentException("La fecha de nacimiento no puede ser futura.");
+		}
+		if (club.existeLogin(login)) {
+			throw new IllegalArgumentException("Ya existe un usuario con el login " + login + ".");
+		}
+		if (club.buscarSocioPorDocumento(documento) != null) {
+			throw new IllegalArgumentException("Ya existe un socio con el documento " + documento + ".");
+		}
+		Socio socio = new Socio(nombre, documento, login, password, fechaNacimiento);
+		club.registrarSocio(socio);
+		return socio;
+	}
+
+	/** HU-A16 */
+	public PagoMensualidad registrarPagoMensualidad(String loginSocio, YearMonth mes, double valor) {
+		Socio socio = club.buscarSocio(loginSocio);
+		if (socio == null) {
+			throw new IllegalArgumentException("No existe un socio con el login " + loginSocio + ".");
+		}
+		if (!socio.isActivo()) {
+			throw new IllegalArgumentException("El socio " + loginSocio + " no esta activo.");
+		}
+		if (mes == null) {
+			throw new IllegalArgumentException("Falta el mes de la mensualidad.");
+		}
+		if (valor <= 0) {
+			throw new IllegalArgumentException("El valor de la mensualidad debe ser mayor que cero.");
+		}
+		if (club.buscarPagoMensualidad(socio, mes) != null) {
+			throw new IllegalArgumentException("La mensualidad de " + mes + " ya fue pagada (pago duplicado).");
+		}
+		PagoMensualidad pago = new PagoMensualidad(socio, mes, valor);
+		club.agregarPagoMensualidad(pago);
+		return pago;
+	}
+
+	private boolean estaVacio(String texto) {
+		return texto == null || texto.trim().isEmpty();
 	}
 
 	public Equipo crearEquipo(String tipo, String nombre, String categoria, int cupo) {

@@ -11,11 +11,13 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import Torneos.Torneo;
+import administracion.PagoMensualidad;
 import administracion.TurnoEmpleado;
 import articulosYVentas.Cafeteria;
 import articulosYVentas.TiendaDeportiva;
@@ -62,7 +64,8 @@ public class ClubDeportivoSeneca implements Serializable {
 	private List<TurnoEmpleado> turnos;
 	private List<InscripcionDisciplinaIndividual> inscripcionesIndividuales;
 	private List<Torneo> torneos;
-	
+	private List<PagoMensualidad> pagosMensualidades;
+
 	private TiendaDeportiva tienda;
 	private Cafeteria cafeteria;
 	private UbicacionInventario bodegaCentral;
@@ -83,6 +86,7 @@ public class ClubDeportivoSeneca implements Serializable {
 		this.turnos = new ArrayList<TurnoEmpleado>();
 		this.inscripcionesIndividuales = new ArrayList<InscripcionDisciplinaIndividual>();
 		this.torneos = new ArrayList<Torneo>();
+		this.pagosMensualidades = new ArrayList<PagoMensualidad>();
 
 		this.administrador = new Administrador(NOMBRE_ADMIN, LOGIN_ADMIN, PASSWORD_ADMIN, this);
 		UbicacionInventario ubicacionTienda = new UbicacionInventario("Tienda Principal", "TIENDA");
@@ -127,6 +131,44 @@ public class ClubDeportivoSeneca implements Serializable {
 		for (int i = 0; i < socios.size(); i++) {
 			if (socios.get(i).getLogin().equalsIgnoreCase(login)) {
 				return socios.get(i);
+			}
+		}
+		return null;
+	}
+
+	public Socio buscarSocioPorDocumento(String documento) {
+		for (int i = 0; i < socios.size(); i++) {
+			if (documento != null && documento.equalsIgnoreCase(socios.get(i).getDocumento())) {
+				return socios.get(i);
+			}
+		}
+		return null;
+	}
+
+	public boolean existeLogin(String login) {
+		if (administrador != null && administrador.getLogin().equalsIgnoreCase(login)) {
+			return true;
+		}
+		if (buscarSocio(login) != null) {
+			return true;
+		}
+		for (int i = 0; i < empleados.size(); i++) {
+			if (empleados.get(i).getLogin().equalsIgnoreCase(login)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public void agregarPagoMensualidad(PagoMensualidad pago) {
+		pagosMensualidades.add(pago);
+	}
+
+	public PagoMensualidad buscarPagoMensualidad(Socio socio, YearMonth mes) {
+		for (int i = 0; i < pagosMensualidades.size(); i++) {
+			PagoMensualidad pago = pagosMensualidades.get(i);
+			if (pago.getSocio().equals(socio) && pago.getMes().equals(mes)) {
+				return pago;
 			}
 		}
 		return null;
@@ -326,6 +368,10 @@ public class ClubDeportivoSeneca implements Serializable {
 			if (this.torneos == null) {
 				this.torneos = new ArrayList<Torneo>();
 			}
+			if (clubCargado.pagosMensualidades == null) {
+				clubCargado.pagosMensualidades = new ArrayList<PagoMensualidad>();
+			}
+			this.pagosMensualidades = clubCargado.pagosMensualidades;
 			this.tienda = clubCargado.tienda;
 			this.cafeteria = clubCargado.cafeteria;
 			this.bodegaCentral = clubCargado.bodegaCentral;
@@ -382,6 +428,7 @@ public class ClubDeportivoSeneca implements Serializable {
 	public List<SesionDeEntrenamiento> getSesiones() { return sesiones; }
 	public List<InscripcionDisciplinaIndividual> getInscripcionesIndividuales() { return inscripcionesIndividuales; }
 	public List<Torneo> getTorneos() { return torneos; }
+	public List<PagoMensualidad> getPagosMensualidades() { return pagosMensualidades; }
 	public TiendaDeportiva getTienda() { return tienda; }
 	public Cafeteria getCafeteria() { return cafeteria; }
 	public UbicacionInventario getBodegaCentral() { return bodegaCentral; }
