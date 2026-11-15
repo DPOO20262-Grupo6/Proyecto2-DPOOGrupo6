@@ -44,7 +44,7 @@ public class Administrador extends Usuario {
 		this.club = club;
 	}
 
-	/** HU-A02 */
+
 	public Socio registrarSocio(String nombre, String documento, LocalDate fechaNacimiento, String login, String password) {
 		if (estaVacio(nombre)) {
 			throw new IllegalArgumentException("Falta el nombre del socio.");
@@ -75,7 +75,7 @@ public class Administrador extends Usuario {
 		return socio;
 	}
 
-	/** HU-A16 */
+
 	public PagoMensualidad registrarPagoMensualidad(String loginSocio, YearMonth mes, double valor) {
 		Socio socio = club.buscarSocio(loginSocio);
 		if (socio == null) {
@@ -196,14 +196,6 @@ public class Administrador extends Usuario {
 		}
 	}
 
-	// ---------------- Torneos internos (HU-A01 a HU-A06) ----------------
-
-	/**
-	 * HU-A01. Deportes individuales (TENIS, PADEL, TENIS_DE_MESA) crean un TorneoIndividual;
-	 * deportes de conjunto (FUTBOL, BALONCESTO, VOLEIBOL) crean un TorneoEquipo y la modalidad se ignora.
-	 * La modalidad acepta INDIVIDUAL/SENCILLOS o DOBLES.
-	 * @throws Exception 
-	 */
 	public Torneo crearTorneo(String nombre, String deporte, String modalidad, String categoria, int cupos, TipoTorneo tipo, LocalDate fechaInicio, double tarifa, double bono) throws Exception {
 		if (deporte == null) {
 			throw new IllegalArgumentException("Debe indicar el deporte del torneo.");
@@ -254,22 +246,21 @@ public class Administrador extends Usuario {
 		return torneo;
 	}
 
-	/** HU-A02 */
+
 	public EstadoTorneo consultarEstadoTorneo(String id) {
 		return obtenerTorneo(id).getEstado();
 	}
 
-	/** HU-A03 */
 	public String consultarHistorialTorneo(String id) {
 		return obtenerTorneo(id).consultarHistorial();
 	}
 
-	/** HU-A05 */
+
 	public void finalizarTorneo(String id) {
 		obtenerTorneo(id).finalizar();
 	}
 
-	/** HU-A06 - torneo por equipos */
+
 	public void registrarResultadoTorneo(String id, PartidoTorneo partido, ResultadoPartidoEquipo resultado) {
 		Torneo torneo = obtenerTorneo(id);
 		if (!(torneo instanceof TorneoEquipo)) {
@@ -278,7 +269,7 @@ public class Administrador extends Usuario {
 		((TorneoEquipo) torneo).registrarResultado(partido, resultado);
 	}
 
-	/** HU-A06 - torneo individual: una estadistica por participante, en el orden del partido */
+
 	public void registrarResultadoTorneo(String id, PartidoDeporteIndividual partido, List<EstadisticasPartidoIndividual> resultado) {
 		Torneo torneo = obtenerTorneo(id);
 		if (!(torneo instanceof TorneoIndividual)) {

@@ -31,6 +31,7 @@ import deportesIndividuales.ReservaInstalacionDeporteIndividual;
 import entrenamiento.RegistroAsistencia;
 import entrenamiento.SesionDeEntrenamiento;
 import enumeraciones.Modalidad;
+import enumeraciones.NivelHabilidad;
 import estadisticas.EstadisticasPartidoDeEquipo;
 import estadisticas.EstadisticasPartidoFutbol;
 import inscripciones.InscripcionDisciplinaIndividual;
@@ -183,16 +184,51 @@ public class ClubDeportivoSeneca implements Serializable {
 		return null;
 	}
 
+	public static boolean esDisciplinaIndividual(String disciplina) {
+		return disciplina != null && (disciplina.equalsIgnoreCase("TENIS") || disciplina.equalsIgnoreCase("PADEL") || disciplina.equalsIgnoreCase("TENIS_DE_MESA"));
+	}
+
+	public InscripcionDisciplinaIndividual buscarInscripcion(Socio socio, String disciplina) {
+		for (int i = 0; i < inscripcionesIndividuales.size(); i++) {
+			InscripcionDisciplinaIndividual inscripcion = inscripcionesIndividuales.get(i);
+			if (inscripcion.getSocio().equals(socio) && inscripcion.getDisciplina().equalsIgnoreCase(disciplina)) {
+				return inscripcion;
+			}
+		}
+		return null;
+	}
+
+	public InscripcionDisciplinaIndividual inscribirEnAcademia(Socio socio, String disciplina, NivelHabilidad nivel) {
+		if (socio == null) {
+			throw new IllegalArgumentException("Debe indicar el socio.");
+		}
+		if (!esDisciplinaIndividual(disciplina)) {
+			throw new IllegalArgumentException("La disciplina " + disciplina + " no existe. Use TENIS, PADEL o TENIS_DE_MESA.");
+		}
+		if (nivel == null) {
+			throw new IllegalArgumentException("El nivel debe ser PRINCIPIANTE, INTERMEDIO o AVANZADO.");
+		}
+		if (buscarInscripcion(socio, disciplina) != null) {
+			throw new IllegalArgumentException("El socio ya esta inscrito en " + disciplina.toUpperCase() + " (inscripcion duplicada).");
+		}
+		InscripcionDisciplinaIndividual inscripcion = socio.inscribirseDisciplina(disciplina, nivel);
+		inscripcionesIndividuales.add(inscripcion);
+		return inscripcion;
+	}
+
 	public ReservaInstalacionDeporteIndividual reservarInstalacion(List<Socio> sociosReserva, CanchaDeporteIndividual cancha, LocalDate fecha, LocalTime horaInicio, LocalTime horaFin, Modalidad modalidad) {
 		int cantidad = sociosReserva.size();
 		ReservaInstalacionDeporteIndividual reserva = new ReservaInstalacionDeporteIndividual(sociosReserva, cancha, fecha, horaInicio, horaFin, cantidad, modalidad);
-		reservas.add(reserva);
 
+		if (cantidad == 0 || buscarInscripcion(sociosReserva.get(0), cancha.getDisciplina()) == null) {
+			reserva.rechazar("El socio no esta inscrito en la disciplina " + cancha.getDisciplina() + ".");
+			return reserva;
+		}
 		if (!cancha.admiteCantidadJugadores(cantidad, modalidad)) {
 			reserva.rechazar("Cantidad de jugadores o modalidad no valida.");
 			return reserva;
 		}
-		if (!cancha.estaDisponible(fecha, horaInicio, horaFin)) {
+		if (!cancha.estaDisponible(fecha, horaInicio, horaFin) || tieneSesionEnHorario(cancha, fecha, horaInicio, horaFin)) {
 			reserva.rechazar("La cancha no esta disponible en ese horario.");
 			return reserva;
 		}
@@ -210,7 +246,29 @@ public class ClubDeportivoSeneca implements Serializable {
 			return reserva;
 		}
 		reserva.confirmar();
+		reservas.add(reserva);
 		return reserva;
+	}
+
+	private boolean tieneSesionEnHorario(CanchaDeporteIndividual cancha, LocalDate fecha, LocalTime horaInicio, LocalTime horaFin) {
+		int duracion = (int) java.time.Duration.between(horaInicio, horaFin).toMinutes();
+		for (int i = 0; i < sesiones.size(); i++) {
+			SesionDeEntrenamiento sesion = sesiones.get(i);
+			if (sesion.getInstalacion() == cancha && sesion.seCruzaCon(fecha, horaInicio, duracion)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public List<ReservaInstalacionDeporteIndividual> getReservasDeSocio(Socio socio) {
+		List<ReservaInstalacionDeporteIndividual> resultado = new ArrayList<ReservaInstalacionDeporteIndividual>();
+		for (int i = 0; i < reservas.size(); i++) {
+			if (reservas.get(i).getSocios().contains(socio)) {
+				resultado.add(reservas.get(i));
+			}
+		}
+		return resultado;
 	}
 
 	public int contarInstalacionesOcupadas(String disciplina, LocalDate fecha, LocalTime horaInicio, LocalTime horaFin) {
@@ -429,6 +487,7 @@ public class ClubDeportivoSeneca implements Serializable {
 	public List<InscripcionDisciplinaIndividual> getInscripcionesIndividuales() { return inscripcionesIndividuales; }
 	public List<Torneo> getTorneos() { return torneos; }
 	public List<PagoMensualidad> getPagosMensualidades() { return pagosMensualidades; }
+	public List<ReservaInstalacionDeporteIndividual> getReservas() { return reservas; }
 	public TiendaDeportiva getTienda() { return tienda; }
 	public Cafeteria getCafeteria() { return cafeteria; }
 	public UbicacionInventario getBodegaCentral() { return bodegaCentral; }

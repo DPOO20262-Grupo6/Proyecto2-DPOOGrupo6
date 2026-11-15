@@ -154,6 +154,8 @@ public class ConsolaPruebas {
 		cuatroSocios.add(sociosA.get(1));
 		cuatroSocios.add(sociosA.get(2));
 		cuatroSocios.add(sociosA.get(3));
+		club.inscribirEnAcademia(sociosA.get(0), "PADEL", NivelHabilidad.INTERMEDIO);
+		club.inscribirEnAcademia(sociosB.get(0), "PADEL", NivelHabilidad.INTERMEDIO);
 
 		ReservaInstalacionDeporteIndividual reserva1 = club.reservarInstalacion(cuatroSocios, canchaPadel, LocalDate.now(), LocalTime.of(10, 0), LocalTime.of(11, 0), Modalidad.DOBLES);
 		System.out.println(reserva1.toString());

@@ -7,7 +7,6 @@ import usuarios.Socio;
 
 public class PagoMensualidad implements Serializable {
 
-	private static final long serialVersionUID = 1L;
 
 	private Socio socio;
 	private YearMonth mes;
