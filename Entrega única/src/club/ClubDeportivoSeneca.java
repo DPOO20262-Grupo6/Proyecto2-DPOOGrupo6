@@ -27,6 +27,10 @@ import deportesDeConjunto.Competencia;
 import deportesDeConjunto.Equipo;
 import deportesDeConjunto.PartidoDeCompetencia;
 import deportesDeConjunto.PartidoInterno;
+import deportesIndividuales.PartidoDeporteIndividual;
+import deportesIndividuales.PartidoPadel;
+import deportesIndividuales.PartidoTenis;
+import deportesIndividuales.PartidoTenisDeMesa;
 import deportesIndividuales.ReservaInstalacionDeporteIndividual;
 import entrenamiento.RegistroAsistencia;
 import entrenamiento.SesionDeEntrenamiento;
@@ -34,6 +38,7 @@ import enumeraciones.Modalidad;
 import enumeraciones.NivelHabilidad;
 import estadisticas.EstadisticasPartidoDeEquipo;
 import estadisticas.EstadisticasPartidoFutbol;
+import estadisticas.EstadisticasPartidoIndividual;
 import inscripciones.InscripcionDisciplinaIndividual;
 import instalaciones.CanchaDeporteIndividual;
 import instalaciones.InstalacionDeportiva;
@@ -66,6 +71,7 @@ public class ClubDeportivoSeneca implements Serializable {
 	private List<InscripcionDisciplinaIndividual> inscripcionesIndividuales;
 	private List<Torneo> torneos;
 	private List<PagoMensualidad> pagosMensualidades;
+	private List<PartidoDeporteIndividual> partidosPractica;
 
 	private TiendaDeportiva tienda;
 	private Cafeteria cafeteria;
@@ -88,6 +94,7 @@ public class ClubDeportivoSeneca implements Serializable {
 		this.inscripcionesIndividuales = new ArrayList<InscripcionDisciplinaIndividual>();
 		this.torneos = new ArrayList<Torneo>();
 		this.pagosMensualidades = new ArrayList<PagoMensualidad>();
+		this.partidosPractica = new ArrayList<PartidoDeporteIndividual>();
 
 		this.administrador = new Administrador(NOMBRE_ADMIN, LOGIN_ADMIN, PASSWORD_ADMIN, this);
 		UbicacionInventario ubicacionTienda = new UbicacionInventario("Tienda Principal", "TIENDA");
@@ -271,6 +278,164 @@ public class ClubDeportivoSeneca implements Serializable {
 		return resultado;
 	}
 
+	public PartidoDeporteIndividual programarPartidoPractica(Socio organizador, ReservaInstalacionDeporteIndividual reserva, List<InscripcionDisciplinaIndividual> participantes, boolean intervieneEntrenador) {
+		if (reserva == null || !"CONFIRMADA".equalsIgnoreCase(reserva.getEstado()) || !reserva.getSocios().contains(organizador)) {
+			throw new IllegalArgumentException("No hay una reserva activa del socio para el partido.");
+		}
+		if (participantes == null || participantes.size() != reserva.getCantidadJugadores()) {
+			throw new IllegalArgumentException("El numero de participantes debe ser " + reserva.getCantidadJugadores() + ", igual al de la reserva.");
+		}
+		String disciplina = reserva.getCancha().getDisciplina();
+		for (int i = 0; i < participantes.size(); i++) {
+			InscripcionDisciplinaIndividual participante = participantes.get(i);
+			if (participantes.indexOf(participante) != i) {
+				throw new IllegalArgumentException("El participante " + participante.getSocio().getNombre() + " esta repetido.");
+			}
+			if (!participante.getDisciplina().equalsIgnoreCase(disciplina)) {
+				throw new IllegalArgumentException("El participante " + participante.getSocio().getNombre() + " es de otra disciplina.");
+			}
+			if (!inscripcionesIndividuales.contains(participante)) {
+				throw new IllegalArgumentException("El participante " + participante.getSocio().getNombre() + " no esta inscrito.");
+			}
+			if (tieneAgendaOcupada(participante, reserva.getFecha(), reserva.getHoraInicio(), reserva.getHoraFin())) {
+				throw new IllegalArgumentException("El participante " + participante.getSocio().getNombre() + " tiene otro partido o sesion en ese bloque (agenda).");
+			}
+		}
+		PartidoDeporteIndividual partido = crearPartidoPractica(disciplina, reserva, intervieneEntrenador);
+		for (int i = 0; i < participantes.size(); i++) {
+			partido.agregarParticipante(participantes.get(i));
+		}
+		partido.setReserva(reserva);
+		partidosPractica.add(partido);
+		return partido;
+	}
+
+	private PartidoDeporteIndividual crearPartidoPractica(String disciplina, ReservaInstalacionDeporteIndividual reserva, boolean intervieneEntrenador) {
+		if (disciplina.equalsIgnoreCase("PADEL")) {
+			return new PartidoPadel(reserva.getFecha(), reserva.getHoraInicio(), reserva.getHoraFin(), reserva.getModalidad(), reserva.getCancha(), intervieneEntrenador);
+		}
+		if (disciplina.equalsIgnoreCase("TENIS_DE_MESA")) {
+			return new PartidoTenisDeMesa(reserva.getFecha(), reserva.getHoraInicio(), reserva.getHoraFin(), reserva.getModalidad(), reserva.getCancha(), intervieneEntrenador);
+		}
+		return new PartidoTenis(reserva.getFecha(), reserva.getHoraInicio(), reserva.getHoraFin(), reserva.getModalidad(), reserva.getCancha(), intervieneEntrenador);
+	}
+
+	private boolean tieneAgendaOcupada(InscripcionDisciplinaIndividual participante, LocalDate fecha, LocalTime horaInicio, LocalTime horaFin) {
+		for (int i = 0; i < partidosPractica.size(); i++) {
+			PartidoDeporteIndividual otro = partidosPractica.get(i);
+			if (otro.seCruzaCon(fecha, horaInicio, horaFin)) {
+				for (int j = 0; j < otro.getParticipantes().size(); j++) {
+					if (otro.getParticipantes().get(j).getSocio().equals(participante.getSocio())) {
+						return true;
+					}
+				}
+			}
+		}
+		int duracion = (int) java.time.Duration.between(horaInicio, horaFin).toMinutes();
+		for (int i = 0; i < sesiones.size(); i++) {
+			SesionDeEntrenamiento sesion = sesiones.get(i);
+			if (sesion.getConvocados().contains(participante.getSocio()) && sesion.seCruzaCon(fecha, horaInicio, duracion)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public void registrarResultadoPractica(PartidoDeporteIndividual partido, List<EstadisticasPartidoIndividual> estadisticas) {
+		if (partido == null || !partidosPractica.contains(partido)) {
+			throw new IllegalArgumentException("El partido de practica no existe.");
+		}
+		if (partido.tieneResultado()) {
+			throw new IllegalStateException("El partido ya tiene resultado.");
+		}
+		if (estadisticas == null || estadisticas.size() != partido.getParticipantes().size()) {
+			throw new IllegalArgumentException("Debe registrar una estadistica por cada participante.");
+		}
+		Class<?> tipoEsperado = partido.crearEstadisticas().getClass();
+		int ganadores = 0;
+		for (int i = 0; i < estadisticas.size(); i++) {
+			EstadisticasPartidoIndividual estadistica = estadisticas.get(i);
+			if (estadistica == null || estadistica.getClass() != tipoEsperado) {
+				throw new IllegalArgumentException("La estadistica no corresponde a la disciplina del partido.");
+			}
+			int sets = estadistica.getSetsGanados();
+			boolean setsValidos = estadistica.esGanador() ? sets == partido.getSetsParaGanar() : sets >= 0 && sets < partido.getSetsParaGanar();
+			if (!setsValidos) {
+				throw new IllegalArgumentException("Marcador de sets imposible para el partido.");
+			}
+			if (estadistica.esGanador()) {
+				ganadores = ganadores + 1;
+			}
+		}
+		if (ganadores * 2 != estadisticas.size()) {
+			throw new IllegalArgumentException("Marcador de sets imposible: debe haber un lado ganador y uno perdedor.");
+		}
+		for (int i = 0; i < estadisticas.size(); i++) {
+			partido.registrarEstadistica(estadisticas.get(i));
+		}
+		partido.finalizar();
+	}
+
+	public String consultarRanking(Socio socio, String disciplina) {
+		InscripcionDisciplinaIndividual inscripcion = buscarInscripcion(socio, disciplina);
+		if (inscripcion == null) {
+			throw new IllegalArgumentException("El socio no esta inscrito en " + disciplina + ".");
+		}
+		int posicion = 1;
+		int total = 0;
+		for (int i = 0; i < inscripcionesIndividuales.size(); i++) {
+			InscripcionDisciplinaIndividual otra = inscripcionesIndividuales.get(i);
+			if (otra.getDisciplina().equalsIgnoreCase(disciplina)) {
+				total = total + 1;
+				if (otra.getRankingElo() > inscripcion.getRankingElo()) {
+					posicion = posicion + 1;
+				}
+			}
+		}
+		int jugados = contarPartidosJugados(inscripcion);
+		String texto = disciplina.toUpperCase() + ": ELO " + inscripcion.getRankingElo() + ", posicion " + posicion + " de " + total;
+		if (jugados == 0) {
+			return texto + ", no hay partidos jugados";
+		}
+		return texto + ", partidos jugados: " + jugados;
+	}
+
+	private int contarPartidosJugados(InscripcionDisciplinaIndividual inscripcion) {
+		int jugados = 0;
+		for (int i = 0; i < partidosPractica.size(); i++) {
+			if (partidosPractica.get(i).tieneResultado() && partidosPractica.get(i).getParticipantes().contains(inscripcion)) {
+				jugados = jugados + 1;
+			}
+		}
+		return jugados;
+	}
+
+	public List<PartidoDeporteIndividual> consultarHistorialPractica(Socio solicitante, Socio socio, String disciplina, LocalDate desde, LocalDate hasta) {
+		if (solicitante == null || !solicitante.equals(socio)) {
+			throw new IllegalArgumentException("No puede consultar el historial de otro socio.");
+		}
+		InscripcionDisciplinaIndividual inscripcion = buscarInscripcion(socio, disciplina);
+		if (inscripcion == null) {
+			throw new IllegalArgumentException("El socio no esta inscrito en " + disciplina + ".");
+		}
+		if (desde != null && hasta != null && hasta.isBefore(desde)) {
+			throw new IllegalArgumentException("La fecha final no puede ser anterior a la inicial (rango invalido).");
+		}
+		List<PartidoDeporteIndividual> historial = new ArrayList<PartidoDeporteIndividual>();
+		for (int i = 0; i < partidosPractica.size(); i++) {
+			PartidoDeporteIndividual partido = partidosPractica.get(i);
+			boolean enRango = (desde == null || !partido.getFecha().isBefore(desde)) && (hasta == null || !partido.getFecha().isAfter(hasta));
+			if (partido.tieneResultado() && partido.getParticipantes().contains(inscripcion) && enRango) {
+				historial.add(partido);
+			}
+		}
+		historial.sort((a, b) -> {
+			int porFecha = a.getFecha().compareTo(b.getFecha());
+			return porFecha != 0 ? porFecha : a.getHoraInicio().compareTo(b.getHoraInicio());
+		});
+		return historial;
+	}
+
 	public int contarInstalacionesOcupadas(String disciplina, LocalDate fecha, LocalTime horaInicio, LocalTime horaFin) {
 		int contador = 0;
 		for (int i = 0; i < reservas.size(); i++) {
@@ -430,6 +595,10 @@ public class ClubDeportivoSeneca implements Serializable {
 				clubCargado.pagosMensualidades = new ArrayList<PagoMensualidad>();
 			}
 			this.pagosMensualidades = clubCargado.pagosMensualidades;
+			if (clubCargado.partidosPractica == null) {
+				clubCargado.partidosPractica = new ArrayList<PartidoDeporteIndividual>();
+			}
+			this.partidosPractica = clubCargado.partidosPractica;
 			this.tienda = clubCargado.tienda;
 			this.cafeteria = clubCargado.cafeteria;
 			this.bodegaCentral = clubCargado.bodegaCentral;
@@ -488,6 +657,7 @@ public class ClubDeportivoSeneca implements Serializable {
 	public List<Torneo> getTorneos() { return torneos; }
 	public List<PagoMensualidad> getPagosMensualidades() { return pagosMensualidades; }
 	public List<ReservaInstalacionDeporteIndividual> getReservas() { return reservas; }
+	public List<PartidoDeporteIndividual> getPartidosPractica() { return partidosPractica; }
 	public TiendaDeportiva getTienda() { return tienda; }
 	public Cafeteria getCafeteria() { return cafeteria; }
 	public UbicacionInventario getBodegaCentral() { return bodegaCentral; }
