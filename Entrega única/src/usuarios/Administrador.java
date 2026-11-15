@@ -11,7 +11,10 @@ import administracion.TurnoEmpleado;
 import articulosYVentas.Articulo;
 import articulosYVentas.ArticuloDeportivo;
 import club.ClubDeportivoSeneca;
+import deportesDeConjunto.Ascun;
 import deportesDeConjunto.Competencia;
+import deportesDeConjunto.PartidoDeCompetencia;
+import deportesDeConjunto.TorneoDeLosCerros;
 import deportesDeConjunto.Equipo;
 import deportesDeConjunto.EquipoBaloncesto;
 import deportesDeConjunto.EquipoFutbol;
@@ -171,6 +174,39 @@ public class Administrador extends Usuario {
 			throw new IllegalArgumentException("El jugador esta en la nomina de la competencia en curso " + competencia.getNombre() + ".");
 		}
 		equipo.retirarJugador(inscripcion);
+	}
+
+	public Competencia registrarCompetencia(String nombre, String entidad, int temporada, String deporte, String categoria, String formato) {
+		if (estaVacio(nombre) || estaVacio(entidad) || estaVacio(deporte) || estaVacio(categoria) || estaVacio(formato) || temporada <= 0) {
+			throw new IllegalArgumentException("Falta un dato de la competencia: nombre, entidad, temporada, deporte, categoria y formato son obligatorios.");
+		}
+		int minimo;
+		if (deporte.equalsIgnoreCase("FUTBOL")) {
+			minimo = 7;
+		} else if (deporte.equalsIgnoreCase("BALONCESTO")) {
+			minimo = 5;
+		} else if (deporte.equalsIgnoreCase("VOLEIBOL")) {
+			minimo = 6;
+		} else {
+			throw new IllegalArgumentException("Deporte no valido: " + deporte);
+		}
+		if (club.buscarCompetencia(nombre, temporada) != null) {
+			throw new IllegalArgumentException("Ya existe la competencia " + nombre + " en la temporada " + temporada + ".");
+		}
+		Competencia competencia;
+		if (formato.equalsIgnoreCase("LIGA")) {
+			competencia = new TorneoDeLosCerros(nombre, entidad, temporada, deporte.toUpperCase(), categoria, minimo);
+		} else if (formato.equalsIgnoreCase("GRUPOS")) {
+			competencia = new Ascun(nombre, entidad, temporada, deporte.toUpperCase(), categoria, minimo);
+		} else {
+			throw new IllegalArgumentException("Formato invalido: " + formato + ". Use LIGA o GRUPOS.");
+		}
+		club.registrarCompetencia(competencia);
+		return competencia;
+	}
+
+	public PartidoDeCompetencia programarPartidoOficial(Competencia competencia, Equipo equipo, String rival, String escenario, LocalDate fecha, Entrenador entrenador) {
+		return competencia.programarPartidoOficial(equipo, rival, escenario, fecha, entrenador);
 	}
 
 	public NominaCompetencia inscribirEquipoEnCompetencia(Equipo equipo, Competencia competencia, List<InscripcionEquipo> jugadores) {

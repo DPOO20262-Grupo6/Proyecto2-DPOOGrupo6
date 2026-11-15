@@ -1,12 +1,14 @@
 package deportesDeConjunto;
 
 import java.time.LocalDate;
+import java.util.List;
 import enumeraciones.MotivoSuspension;
 import estadisticas.EstadisticasPartidoDeEquipo;
 import estadisticas.EstadisticasPartidoFutbol;
 import estadisticas.Suspension;
 import inscripciones.InscripcionEquipo;
 import inscripciones.InscripcionEquipoFutbol;
+import usuarios.Entrenador;
 
 public class PartidoInterno extends PartidoDeEquipo {
 	
@@ -14,6 +16,7 @@ public class PartidoInterno extends PartidoDeEquipo {
 	
 	private Equipo equipoLocal;
 	private Equipo equipoVisitante;
+	private Entrenador entrenador;
 
 	public PartidoInterno(LocalDate fecha, Equipo equipoLocal, Equipo equipoVisitante) {
 		super(fecha, equipoLocal.getDeporte());
@@ -38,6 +41,59 @@ public class PartidoInterno extends PartidoDeEquipo {
 	public boolean validarCuorum() {
 		return equipoLocal.cumpleMinimoJugadores() && equipoVisitante.cumpleMinimoJugadores();
 	}
+
+	public boolean isFinalizado() {
+		return resultado != null;
+	}
+
+	public void registrarAlineacion(Equipo equipo, List<InscripcionEquipo> jugadores) {
+		if (equipo != equipoLocal && equipo != equipoVisitante) {
+			throw new IllegalArgumentException("El equipo " + equipo.getNombre() + " no juega este partido.");
+		}
+		for (int i = 0; i < jugadores.size(); i++) {
+			InscripcionEquipo jugador = jugadores.get(i);
+			if (!equipo.getInscripciones().contains(jugador) || !jugador.isActiva()) {
+				throw new IllegalArgumentException("El jugador " + jugador.getSocio().getNombre() + " no pertenece al equipo " + equipo.getNombre() + ".");
+			}
+			if (!jugador.estaHabilitado()) {
+				throw new IllegalArgumentException("El jugador " + jugador.getSocio().getNombre() + " esta suspendido.");
+			}
+		}
+		for (int i = 0; i < jugadores.size(); i++) {
+			registrarParticipacion(jugadores.get(i));
+		}
+	}
+
+	@Override
+	public void registrarEstadistica(InscripcionEquipo inscripcion, EstadisticasPartidoDeEquipo est) {
+		if (!isFinalizado()) {
+			throw new IllegalStateException("El partido aun no ha finalizado.");
+		}
+		super.registrarEstadistica(inscripcion, est);
+	}
+
+	@Override
+	public void registrarResultado(ResultadoPartidoEquipo resultado) {
+		super.registrarResultado(resultado);
+		cumplirSuspensiones(equipoLocal);
+		cumplirSuspensiones(equipoVisitante);
+	}
+
+	private void cumplirSuspensiones(Equipo equipo) {
+		for (int i = 0; i < equipo.getInscripciones().size(); i++) {
+			if (equipo.getInscripciones().get(i) instanceof InscripcionEquipoFutbol) {
+				List<Suspension> suspensiones = ((InscripcionEquipoFutbol) equipo.getInscripciones().get(i)).getSuspensiones();
+				for (int j = 0; j < suspensiones.size(); j++) {
+					if (!suspensiones.get(j).isCumplida()) {
+						suspensiones.get(j).seCumpleEn(this);
+					}
+				}
+			}
+		}
+	}
+
+	public Entrenador getEntrenador() { return entrenador; }
+	public void setEntrenador(Entrenador entrenador) { this.entrenador = entrenador; }
 
 	@Override
 	protected void procesarTarjetasYSuspensiones(InscripcionEquipo inscripcion, EstadisticasPartidoDeEquipo estadisticas) {

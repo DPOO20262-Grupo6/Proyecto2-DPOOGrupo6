@@ -6,6 +6,7 @@ import estadisticas.EstadisticasPartidoDeEquipo;
 import estadisticas.EstadisticasPartidoFutbol;
 import estadisticas.Suspension;
 import inscripciones.InscripcionEquipo;
+import usuarios.Entrenador;
 
 public class PartidoDeCompetencia extends PartidoDeEquipo {
 	
@@ -16,6 +17,8 @@ public class PartidoDeCompetencia extends PartidoDeEquipo {
 	private boolean esLocal;
 	private Competencia competencia;
 	private Equipo equipoClub;
+	private Entrenador entrenador;
+	private boolean contabilizado;
 
 	public PartidoDeCompetencia(LocalDate fecha, String deporte, Competencia competencia, Equipo equipoClub, String institucionRival, String escenario, boolean esLocal) {
 		super(fecha, deporte);
@@ -85,6 +88,10 @@ public class PartidoDeCompetencia extends PartidoDeEquipo {
 		return null;
 	}
 
+	public Entrenador getEntrenador() { return entrenador; }
+	public void setEntrenador(Entrenador entrenador) { this.entrenador = entrenador; }
+	public boolean isContabilizado() { return contabilizado; }
+	public void setContabilizado(boolean contabilizado) { this.contabilizado = contabilizado; }
 	public Equipo getEquipoClub() { return equipoClub; }
 	public void setEquipoClub(Equipo equipoClub) { this.equipoClub = equipoClub; }
 	public String getInstitucionRival() { return institucionRival; }

@@ -9,4 +9,7 @@ public abstract class ResultadoPartidoEquipo implements Serializable {
 	public abstract String getGanador();
 
 	public abstract boolean esEmpate();
+
+	public void validar() {
+	}
 }

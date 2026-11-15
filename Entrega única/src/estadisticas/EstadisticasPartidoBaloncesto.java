@@ -29,6 +29,11 @@ public class EstadisticasPartidoBaloncesto extends EstadisticasPartidoDeEquipo {
 	public void setRebotes(int rebotes) { this.rebotes = rebotes; }
 
 	@Override
+	public boolean tieneValoresNegativos() {
+		return puntos < 0 || rebotes < 0;
+	}
+
+	@Override
 	public String getResumen() {
 		return "Puntos: " + puntos + ", Rebotes: " + rebotes;
 	}

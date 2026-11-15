@@ -17,6 +17,12 @@ public class NominaCompetencia implements Serializable {
 	private Equipo equipo;
 	private Competencia competencia;
 	private List<JugadorEnNomina> jugadores;
+	private int jugados;
+	private int empatados;
+	private int perdidos;
+	private int golesAFavor;
+	private int golesEnContra;
+	private String grupo;
 
 	public NominaCompetencia(Equipo equipo, Competencia competencia, LocalDate fechaInscripcion) {
 		this.equipo = equipo;
@@ -51,6 +57,29 @@ public class NominaCompetencia implements Serializable {
 		}
 		return habilitados >= competencia.getJugadoresMinimosNomina();
 	}
+
+	public void registrarPartido(int aFavor, int enContra, int puntos) {
+		jugados = jugados + 1;
+		golesAFavor = golesAFavor + aFavor;
+		golesEnContra = golesEnContra + enContra;
+		if (aFavor > enContra) {
+			partidosGanados = partidosGanados + 1;
+		} else if (aFavor == enContra) {
+			empatados = empatados + 1;
+		} else {
+			perdidos = perdidos + 1;
+		}
+		puntosAcumulados = puntosAcumulados + puntos;
+	}
+
+	public int getJugados() { return jugados; }
+	public int getEmpatados() { return empatados; }
+	public int getPerdidos() { return perdidos; }
+	public int getGolesAFavor() { return golesAFavor; }
+	public int getGolesEnContra() { return golesEnContra; }
+	public int getDiferencia() { return golesAFavor - golesEnContra; }
+	public String getGrupo() { return grupo; }
+	public void setGrupo(String grupo) { this.grupo = grupo; }
 
 	public void sumarPuntos(int puntos) {
 		this.puntosAcumulados = this.puntosAcumulados + puntos;

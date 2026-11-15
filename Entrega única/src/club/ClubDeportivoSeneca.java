@@ -23,10 +23,17 @@ import articulosYVentas.Cafeteria;
 import articulosYVentas.TiendaDeportiva;
 import articulosYVentas.VentaCafeteria;
 import articulosYVentas.VentaTienda;
+import deportesDeConjunto.Ascun;
 import deportesDeConjunto.Competencia;
+import deportesDeConjunto.JugadorEnNomina;
+import deportesDeConjunto.NominaCompetencia;
 import deportesDeConjunto.Equipo;
 import deportesDeConjunto.PartidoDeCompetencia;
+import deportesDeConjunto.PartidoDeEquipo;
 import deportesDeConjunto.PartidoInterno;
+import deportesDeConjunto.ResultadoPartidoEquipo;
+import deportesDeConjunto.ResultadoPorPuntos;
+import deportesDeConjunto.ResultadoVoleibol;
 import deportesIndividuales.PartidoDeporteIndividual;
 import deportesIndividuales.PartidoPadel;
 import deportesIndividuales.PartidoTenis;
@@ -36,7 +43,9 @@ import entrenamiento.RegistroAsistencia;
 import entrenamiento.SesionDeEntrenamiento;
 import enumeraciones.Modalidad;
 import enumeraciones.NivelHabilidad;
+import estadisticas.EstadisticasPartidoBaloncesto;
 import estadisticas.EstadisticasPartidoDeEquipo;
+import estadisticas.EstadisticasPartidoVoleibol;
 import estadisticas.EstadisticasPartidoFutbol;
 import estadisticas.EstadisticasPartidoIndividual;
 import inscripciones.InscripcionDisciplinaIndividual;
@@ -751,6 +760,143 @@ public class ClubDeportivoSeneca implements Serializable {
 		equipos.add(equipo);
 	}
 
+	public PartidoInterno programarPartidoInterno(Entrenador entrenador, Equipo local, Equipo visitante, LocalDate fecha) {
+		if (entrenador == null || local == null || visitante == null || fecha == null) {
+			throw new IllegalArgumentException("Faltan datos del partido.");
+		}
+		if (fecha.isBefore(LocalDate.now())) {
+			throw new IllegalArgumentException("La fecha del partido no puede ser pasada.");
+		}
+		if (!local.isActivo() || !visitante.isActivo()) {
+			throw new IllegalArgumentException("Ambos equipos deben estar activos.");
+		}
+		PartidoInterno partido = new PartidoInterno(fecha, local, visitante);
+		validarMinimoHabilitados(local);
+		validarMinimoHabilitados(visitante);
+		partido.setEntrenador(entrenador);
+		partidosInternos.add(partido);
+		return partido;
+	}
+
+	private void validarMinimoHabilitados(Equipo equipo) {
+		int faltan = equipo.getMinimoJugadoresHabilitados() - equipo.contarJugadoresHabilitados();
+		if (faltan > 0) {
+			throw new IllegalArgumentException("Al equipo " + equipo.getNombre() + " le faltan " + faltan + " jugadores habilitados.");
+		}
+	}
+
+	public void registrarResultadoInterno(Entrenador entrenador, PartidoInterno partido, ResultadoPartidoEquipo resultado) {
+		if (partido == null || !partidosInternos.contains(partido)) {
+			throw new IllegalArgumentException("El partido no existe.");
+		}
+		if (partido.getEntrenador() != entrenador) {
+			throw new IllegalArgumentException("El partido no fue programado por este entrenador.");
+		}
+		if (partido.isFinalizado()) {
+			throw new IllegalStateException("El partido ya tiene resultado.");
+		}
+		if (partido.getFecha().isAfter(LocalDate.now())) {
+			throw new IllegalStateException("El partido aun no se ha disputado.");
+		}
+		if (resultado == null) {
+			throw new IllegalArgumentException("Debe indicar el marcador.");
+		}
+		partido.registrarResultado(resultado);
+	}
+
+	public String consultarEstadisticasEquipo(Socio socio, Equipo equipo) {
+		InscripcionEquipo inscripcion = null;
+		for (int i = 0; i < equipo.getInscripciones().size(); i++) {
+			InscripcionEquipo candidata = equipo.getInscripciones().get(i);
+			if (candidata.isActiva() && candidata.getSocio().equals(socio)) {
+				inscripcion = candidata;
+			}
+		}
+		if (inscripcion == null) {
+			throw new IllegalArgumentException("El socio no pertenece al equipo " + equipo.getNombre() + ".");
+		}
+		List<PartidoDeEquipo> jugados = new ArrayList<PartidoDeEquipo>();
+		List<Boolean> comoLocal = new ArrayList<Boolean>();
+		for (int i = 0; i < partidosInternos.size(); i++) {
+			PartidoInterno partido = partidosInternos.get(i);
+			if (partido.getResultado() != null && (partido.getEquipoLocal() == equipo || partido.getEquipoVisitante() == equipo)) {
+				jugados.add(partido);
+				comoLocal.add(partido.getEquipoLocal() == equipo);
+			}
+		}
+		for (int i = 0; i < competencias.size(); i++) {
+			for (int j = 0; j < competencias.get(i).getPartidos().size(); j++) {
+				PartidoDeCompetencia partido = competencias.get(i).getPartidos().get(j);
+				if (partido.getResultado() != null && partido.getEquipoClub() == equipo) {
+					jugados.add(partido);
+					comoLocal.add(partido.isEsLocal());
+				}
+			}
+		}
+		int ganados = 0;
+		int empatados = 0;
+		int aFavor = 0;
+		int enContra = 0;
+		int[] propias = new int[2];
+		for (int i = 0; i < jugados.size(); i++) {
+			ResultadoPartidoEquipo resultado = jugados.get(i).getResultado();
+			int[] marcador = marcadorDe(resultado);
+			int propio = comoLocal.get(i) ? marcador[0] : marcador[1];
+			int rival = comoLocal.get(i) ? marcador[1] : marcador[0];
+			aFavor = aFavor + propio;
+			enContra = enContra + rival;
+			if (resultado.esEmpate()) {
+				empatados = empatados + 1;
+			} else if (propio > rival) {
+				ganados = ganados + 1;
+			}
+			List<EstadisticasPartidoDeEquipo> mias = jugados.get(i).getEstadisticasDe(inscripcion);
+			for (int j = 0; j < mias.size(); j++) {
+				sumarEstadisticas(propias, mias.get(j));
+			}
+		}
+		int perdidos = jugados.size() - ganados - empatados;
+		String texto = "Equipo " + equipo.getNombre() + ": jugados " + jugados.size() + ", ganados " + ganados + ", empatados " + empatados
+				+ ", perdidos " + perdidos + ", a favor " + aFavor + ", en contra " + enContra;
+		if (jugados.isEmpty()) {
+			texto = texto + ", no hay partidos jugados";
+		}
+		return texto + "\nMis estadisticas: " + describirEstadisticas(equipo.getDeporte(), propias);
+	}
+
+	private int[] marcadorDe(ResultadoPartidoEquipo resultado) {
+		if (resultado instanceof ResultadoPorPuntos) {
+			return new int[] { ((ResultadoPorPuntos) resultado).getPuntosLocal(), ((ResultadoPorPuntos) resultado).getPuntosVisitante() };
+		}
+		if (resultado instanceof ResultadoVoleibol) {
+			return new int[] { ((ResultadoVoleibol) resultado).getSetsGanadosLocal(), ((ResultadoVoleibol) resultado).getSetsGanadosVisitante() };
+		}
+		return new int[] { 0, 0 };
+	}
+
+	private void sumarEstadisticas(int[] acumulado, EstadisticasPartidoDeEquipo estadistica) {
+		if (estadistica instanceof EstadisticasPartidoFutbol) {
+			acumulado[0] = acumulado[0] + ((EstadisticasPartidoFutbol) estadistica).getGoles();
+			acumulado[1] = acumulado[1] + ((EstadisticasPartidoFutbol) estadistica).getAsistencias();
+		} else if (estadistica instanceof EstadisticasPartidoBaloncesto) {
+			acumulado[0] = acumulado[0] + ((EstadisticasPartidoBaloncesto) estadistica).getPuntos();
+			acumulado[1] = acumulado[1] + ((EstadisticasPartidoBaloncesto) estadistica).getRebotes();
+		} else if (estadistica instanceof EstadisticasPartidoVoleibol) {
+			acumulado[0] = acumulado[0] + ((EstadisticasPartidoVoleibol) estadistica).getAces();
+			acumulado[1] = acumulado[1] + ((EstadisticasPartidoVoleibol) estadistica).getBloqueos();
+		}
+	}
+
+	private String describirEstadisticas(String deporte, int[] valores) {
+		if (deporte.equalsIgnoreCase("BALONCESTO")) {
+			return "puntos " + valores[0] + ", rebotes " + valores[1];
+		}
+		if (deporte.equalsIgnoreCase("VOLEIBOL")) {
+			return "aces " + valores[0] + ", bloqueos " + valores[1];
+		}
+		return "goles " + valores[0] + ", asistencias " + valores[1];
+	}
+
 	public Equipo buscarEquipoActivo(String nombre, String deporte, String categoria) {
 		for (int i = 0; i < equipos.size(); i++) {
 			Equipo equipo = equipos.get(i);
@@ -780,6 +926,147 @@ public class ClubDeportivoSeneca implements Serializable {
 		if (competencia != null && !competencias.contains(competencia)) {
 			competencias.add(competencia);
 		}
+	}
+
+	public Competencia buscarCompetencia(String nombre, int temporada) {
+		for (int i = 0; i < competencias.size(); i++) {
+			if (competencias.get(i).getNombre().equalsIgnoreCase(nombre) && competencias.get(i).getAnioTemporada() == temporada) {
+				return competencias.get(i);
+			}
+		}
+		return null;
+	}
+
+	public Competencia buscarCompetencia(String nombre) {
+		for (int i = 0; i < competencias.size(); i++) {
+			if (competencias.get(i).getNombre().equalsIgnoreCase(nombre)) {
+				return competencias.get(i);
+			}
+		}
+		return null;
+	}
+
+	public String consultarTablaPosiciones(String nombreCompetencia, String grupo) {
+		Competencia competencia = buscarCompetencia(nombreCompetencia);
+		if (competencia == null || !competencia.tieneResultados()) {
+			return "No hay informacion de la competencia " + nombreCompetencia + ".";
+		}
+		if (grupo != null && competencia instanceof Ascun) {
+			Ascun ascun = (Ascun) competencia;
+			StringBuilder texto = new StringBuilder(describirTabla(ascun.getTablaGrupo(grupo)));
+			texto.append("Clasifican:");
+			List<Equipo> clasificados = ascun.getClasificados(grupo);
+			for (int i = 0; i < clasificados.size(); i++) {
+				texto.append(i == 0 ? " " : ", ").append(clasificados.get(i).getNombre());
+			}
+			return texto.toString();
+		}
+		return describirTabla(competencia.ordenarTabla(competencia.getNominas()));
+	}
+
+	public String consultarTablas(String deporte, String categoria) {
+		StringBuilder texto = new StringBuilder();
+		for (int i = 0; i < competencias.size(); i++) {
+			Competencia competencia = competencias.get(i);
+			boolean coincide = (deporte == null || competencia.getDeporte().equalsIgnoreCase(deporte))
+					&& (categoria == null || competencia.getCategoriaHabilitada().equalsIgnoreCase(categoria));
+			if (coincide && competencia.tieneResultados()) {
+				texto.append(competencia.getNombre()).append("\n").append(describirTabla(competencia.ordenarTabla(competencia.getNominas())));
+			}
+		}
+		if (texto.length() == 0) {
+			return "No hay informacion para ese filtro.";
+		}
+		return texto.toString();
+	}
+
+	private String describirTabla(List<NominaCompetencia> tabla) {
+		StringBuilder texto = new StringBuilder();
+		for (int i = 0; i < tabla.size(); i++) {
+			NominaCompetencia nomina = tabla.get(i);
+			texto.append(i + 1).append(". ").append(nomina.getEquipo().getNombre()).append(" - ")
+				.append(nomina.getPuntosAcumulados()).append(" pts | PJ ").append(nomina.getJugados())
+				.append(", G ").append(nomina.getPartidosGanados()).append(", E ").append(nomina.getEmpatados())
+				.append(", P ").append(nomina.getPerdidos()).append(", DIF ").append(nomina.getDiferencia()).append("\n");
+		}
+		return texto.toString();
+	}
+
+	public String consultarGoleadores(String nombreCompetencia) {
+		return clasificacionIndividual(nombreCompetencia, true);
+	}
+
+	public String consultarDestacados(String nombreCompetencia) {
+		return clasificacionIndividual(nombreCompetencia, false);
+	}
+
+	private String clasificacionIndividual(String nombreCompetencia, boolean goleadores) {
+		Competencia competencia = buscarCompetencia(nombreCompetencia);
+		if (competencia == null) {
+			return "No hay informacion de la competencia " + nombreCompetencia + ".";
+		}
+		List<InscripcionEquipo> jugadores = new ArrayList<InscripcionEquipo>();
+		List<Integer> valores = new ArrayList<Integer>();
+		for (int i = 0; i < competencia.getNominas().size(); i++) {
+			List<JugadorEnNomina> nomina = competencia.getNominas().get(i).getJugadores();
+			for (int j = 0; j < nomina.size(); j++) {
+				InscripcionEquipo jugador = nomina.get(j).getInscripcion();
+				boolean tieneEstadisticas = false;
+				int valor = 0;
+				for (int k = 0; k < competencia.getPartidos().size(); k++) {
+					List<EstadisticasPartidoDeEquipo> propias = competencia.getPartidos().get(k).getEstadisticasDe(jugador);
+					for (int m = 0; m < propias.size(); m++) {
+						tieneEstadisticas = true;
+						valor = valor + valorIndividual(propias.get(m), goleadores);
+					}
+				}
+				if (tieneEstadisticas) {
+					int posicion = 0;
+					while (posicion < valores.size() && valores.get(posicion) >= valor) {
+						posicion = posicion + 1;
+					}
+					jugadores.add(posicion, jugador);
+					valores.add(posicion, valor);
+				}
+			}
+		}
+		if (jugadores.isEmpty()) {
+			return "No hay informacion de estadisticas en la competencia " + nombreCompetencia + ".";
+		}
+		String unidad = goleadores ? "goles" : unidadDestacado(competencia.getDeporte());
+		StringBuilder texto = new StringBuilder();
+		for (int i = 0; i < jugadores.size(); i++) {
+			texto.append(i + 1).append(". ").append(jugadores.get(i).getSocio().getNombre()).append(" (")
+				.append(jugadores.get(i).getEquipo().getNombre()).append(") - ").append(valores.get(i)).append(" ").append(unidad).append("\n");
+		}
+		return texto.toString();
+	}
+
+	private int valorIndividual(EstadisticasPartidoDeEquipo estadistica, boolean goleadores) {
+		if (estadistica instanceof EstadisticasPartidoFutbol) {
+			EstadisticasPartidoFutbol futbol = (EstadisticasPartidoFutbol) estadistica;
+			return goleadores ? futbol.getGoles() : futbol.getAsistencias();
+		}
+		if (goleadores) {
+			return 0;
+		}
+		if (estadistica instanceof EstadisticasPartidoBaloncesto) {
+			return ((EstadisticasPartidoBaloncesto) estadistica).getPuntos();
+		}
+		if (estadistica instanceof EstadisticasPartidoVoleibol) {
+			return ((EstadisticasPartidoVoleibol) estadistica).getAces();
+		}
+		return 0;
+	}
+
+	private String unidadDestacado(String deporte) {
+		if (deporte.equalsIgnoreCase("BALONCESTO")) {
+			return "puntos";
+		}
+		if (deporte.equalsIgnoreCase("VOLEIBOL")) {
+			return "aces";
+		}
+		return "asistencias";
 	}
 
 	public Competencia buscarCompetenciaEnCursoDeJugador(InscripcionEquipo inscripcion) {
