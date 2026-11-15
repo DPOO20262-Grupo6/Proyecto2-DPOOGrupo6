@@ -1,6 +1,6 @@
 package Torneos;
 
-<<<<<<< HEAD
+
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.List;
@@ -188,19 +188,7 @@ public abstract class Torneo implements Serializable {
 	public String toString() {
 		return id + " - " + nombre + " (" + deporte + ", " + estado + ")";
 	}
-}
-=======
-public interface Torneo {
 	
-    public void inscribir();
-
-
-
-    public void retirar();
-
-    public int cuposDisponibles();
-    
-    public boolean haIniciado();
-
 }
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
+
+
