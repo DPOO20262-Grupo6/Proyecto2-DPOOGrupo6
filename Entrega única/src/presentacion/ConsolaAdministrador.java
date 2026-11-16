@@ -9,7 +9,18 @@ import java.util.List;
 import java.util.Scanner;
 
 import Torneos.Torneo;
+import Torneos.TorneoEquipo;
 import Torneos.TorneoIndividual;
+import deportesDeConjunto.PartidoTorneo;
+import deportesDeConjunto.ResultadoPartidoEquipo;
+import deportesDeConjunto.ResultadoPorPuntos;
+import deportesDeConjunto.ResultadoVoleibol;
+import deportesDeConjunto.SetVoleibol;
+import deportesIndividuales.PartidoDeporteIndividual;
+import estadisticas.EstadisticasPartidoIndividual;
+import estadisticas.EstadisticasPartidoPadel;
+import estadisticas.EstadisticasPartidoTenis;
+import estadisticas.EstadisticasPartidoTenisDeMesa;
 import administracion.PagoMensualidad;
 import administracion.SolicitudCambioTurnoEmpleado;
 import administracion.Sugerencia;
@@ -236,9 +247,12 @@ public class ConsolaAdministrador {
 			System.out.println("3. Consultar historial de un torneo");
 			System.out.println("4. Consultar cupos preferenciales de un torneo");
 			System.out.println("5. Listar torneos");
+			System.out.println("6. Finalizar un torneo");
+			System.out.println("7. Registrar el resultado de un partido de torneo");
 			System.out.println("0. Volver");
-			seguir = ejecutarAccion(leerOpcion(), new String[] { "1", "2", "3", "4", "5" },
-					new Runnable[] { this::crearTorneoSeguro, this::consultarEstado, this::consultarHistorial, this::consultarCuposPreferenciales, this::listarTorneos });
+			seguir = ejecutarAccion(leerOpcion(), new String[] { "1", "2", "3", "4", "5", "6", "7" },
+					new Runnable[] { this::crearTorneoSeguro, this::consultarEstado, this::consultarHistorial, this::consultarCuposPreferenciales,
+							this::listarTorneos, this::finalizarTorneo, this::registrarResultadoTorneo });
 		}
 	}
 
@@ -710,6 +724,109 @@ public class ConsolaAdministrador {
 					+ " | " + modalidad + " | " + torneo.getTipo() + " | " + torneo.getEstado()
 					+ " | inicio " + torneo.getFechaInicio());
 		}
+	}
+
+	private void finalizarTorneo() {
+		System.out.println("--- Finalizar un torneo ---");
+		Torneo torneo = pedirTorneo();
+		if (torneo == null) {
+			System.out.println(MENSAJE_NO_EXISTE);
+			return;
+		}
+		administrador.finalizarTorneo(torneo.getId());
+		System.out.println("Torneo " + torneo.getNombre() + " finalizado.");
+		System.out.println(torneo.getPremioEntregado());
+	}
+
+	private void registrarResultadoTorneo() {
+		System.out.println("--- Registrar resultado de un partido de torneo ---");
+		Torneo torneo = pedirTorneo();
+		if (torneo == null) {
+			System.out.println(MENSAJE_NO_EXISTE);
+			return;
+		}
+		if (torneo instanceof TorneoEquipo) {
+			registrarResultadoTorneoEquipo((TorneoEquipo) torneo);
+		} else {
+			registrarResultadoTorneoIndividual((TorneoIndividual) torneo);
+		}
+	}
+
+	private void registrarResultadoTorneoEquipo(TorneoEquipo torneo) {
+		List<PartidoTorneo> pendientes = new ArrayList<PartidoTorneo>();
+		for (int i = 0; i < torneo.getPartidos().size(); i++) {
+			if (torneo.getPartidos().get(i).getResultado() == null) {
+				pendientes.add(torneo.getPartidos().get(i));
+			}
+		}
+		if (pendientes.isEmpty()) {
+			System.out.println("El torneo no tiene partidos pendientes de resultado.");
+			return;
+		}
+		for (int i = 0; i < pendientes.size(); i++) {
+			System.out.println((i + 1) + ". " + pendientes.get(i));
+		}
+		PartidoTorneo partido = pendientes.get(pedirIndice(pendientes.size()));
+		ResultadoPartidoEquipo resultado;
+		if (torneo.getDeporte().equalsIgnoreCase("VOLEIBOL")) {
+			ResultadoVoleibol voleibol = new ResultadoVoleibol();
+			String[] sets = leerTexto("Puntos de cada set como local-visitante separados por coma (ej. 25-20,23-25,25-18): ").split(",");
+			for (int i = 0; i < sets.length; i++) {
+				String[] puntos = sets[i].trim().split("-");
+				voleibol.agregarSet(new SetVoleibol(i + 1, Integer.parseInt(puntos[0].trim()), Integer.parseInt(puntos[1].trim())));
+			}
+			resultado = voleibol;
+		} else {
+			Integer local = leerEntero("Marcador de " + partido.getEquipoLocal().getNombre() + ": ");
+			Integer visitante = leerEntero("Marcador de " + partido.getEquipoVisitante().getNombre() + ": ");
+			if (local == null || visitante == null) {
+				throw new IllegalArgumentException("El marcador debe ser un numero entero.");
+			}
+			resultado = new ResultadoPorPuntos(local, visitante);
+		}
+		administrador.registrarResultadoTorneo(torneo.getId(), partido, resultado);
+		System.out.println("Resultado registrado: " + partido);
+	}
+
+	private void registrarResultadoTorneoIndividual(TorneoIndividual torneo) {
+		List<PartidoDeporteIndividual> pendientes = new ArrayList<PartidoDeporteIndividual>();
+		for (int i = 0; i < torneo.getPartidos().size(); i++) {
+			if (torneo.getPartidos().get(i).getEstadisticas().isEmpty()) {
+				pendientes.add(torneo.getPartidos().get(i));
+			}
+		}
+		if (pendientes.isEmpty()) {
+			System.out.println("El torneo no tiene partidos pendientes de resultado.");
+			return;
+		}
+		for (int i = 0; i < pendientes.size(); i++) {
+			PartidoDeporteIndividual partido = pendientes.get(i);
+			StringBuilder nombres = new StringBuilder();
+			for (int j = 0; j < partido.getParticipantes().size(); j++) {
+				nombres.append(j == 0 ? "" : " vs ").append(partido.getParticipantes().get(j).getSocio().getNombre());
+			}
+			System.out.println((i + 1) + ". " + nombres + " (" + partido.getFecha() + ")");
+		}
+		PartidoDeporteIndividual partido = pendientes.get(pedirIndice(pendientes.size()));
+		List<EstadisticasPartidoIndividual> estadisticas = new ArrayList<EstadisticasPartidoIndividual>();
+		for (int i = 0; i < partido.getParticipantes().size(); i++) {
+			String nombre = partido.getParticipantes().get(i).getSocio().getNombre();
+			Integer sets = leerEntero("Sets ganados por " + nombre + ": ");
+			boolean gano = leerTexto("Gano " + nombre + "? (S/N): ").equalsIgnoreCase("S");
+			EstadisticasPartidoIndividual estadistica = partido.crearEstadisticas();
+			int setsGanados = sets == null ? 0 : sets;
+			if (estadistica instanceof EstadisticasPartidoTenis) {
+				((EstadisticasPartidoTenis) estadistica).setSetsGanados(setsGanados);
+			} else if (estadistica instanceof EstadisticasPartidoPadel) {
+				((EstadisticasPartidoPadel) estadistica).setSetsGanados(setsGanados);
+			} else if (estadistica instanceof EstadisticasPartidoTenisDeMesa) {
+				((EstadisticasPartidoTenisDeMesa) estadistica).setSetsGanados(setsGanados);
+			}
+			estadistica.setGanador(gano);
+			estadisticas.add(estadistica);
+		}
+		administrador.registrarResultadoTorneo(torneo.getId(), partido, estadisticas);
+		System.out.println("Resultado registrado y ELO actualizado.");
 	}
 
 	private void guardarYSalir() {
