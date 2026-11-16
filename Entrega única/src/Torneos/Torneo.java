@@ -9,6 +9,8 @@ import enumeraciones.TipoTorneo;
 
 public abstract class Torneo implements Serializable {
 
+	private static final long serialVersionUID = 1L;
+
 	private String id;
 	private String nombre;
 	private String deporte;
@@ -108,9 +110,36 @@ public abstract class Torneo implements Serializable {
 		if (tipo == TipoTorneo.RECREATIVO) {
 			premioEntregado = "Bono de descuento por $" + valorBono + " para " + nombreGanador;
 		} else {
-			double bolsa = tarifaInscripcion * getNumeroInscritos();
-			premioEntregado = "Premio en efectivo de $" + bolsa + " para " + nombreGanador;
+			double bolsa = getTotalRecaudado();
+			String beneficiario = getNombreBeneficiarioPremioEfectivo();
+			if (beneficiario == null) {
+				premioEntregado = "Premio en efectivo de $" + bolsa + " sin entregar: el ganador " + nombreGanador
+						+ " no recibe premio en efectivo y no hay otro participante que pueda recibirlo.";
+			} else if (beneficiario.equals(nombreGanador)) {
+				premioEntregado = "Premio en efectivo de $" + bolsa + " para " + nombreGanador;
+			} else {
+				premioEntregado = "Premio en efectivo de $" + bolsa + " para " + beneficiario
+						+ " (el ganador " + nombreGanador + " no recibe premio en efectivo)";
+			}
 		}
+	}
+
+	/** Inscritos que pagaron la tarifa. Los empleados participan gratis y no cuentan. */
+	public int getNumeroInscritosQuePagan() {
+		return getNumeroInscritos();
+	}
+
+	/** Total recaudado por inscripciones: es la bolsa del premio en efectivo de un torneo competitivo. */
+	public double getTotalRecaudado() {
+		return tarifaInscripcion * getNumeroInscritosQuePagan();
+	}
+
+	/**
+	 * Nombre de quien recibe el premio en efectivo. Normalmente es el ganador; si el ganador
+	 * no puede recibirlo (es empleado), es el mejor ubicado que si pueda, o null si no hay ninguno.
+	 */
+	public String getNombreBeneficiarioPremioEfectivo() {
+		return getNombreGanador();
 	}
 
 	public EstadoTorneo getEstado() {

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import enumeraciones.NivelHabilidad;
 import usuarios.Socio;
+import usuarios.Usuario;
 
 public class InscripcionDisciplinaIndividual implements Serializable {
 	
@@ -87,5 +88,22 @@ public class InscripcionDisciplinaIndividual implements Serializable {
 
 	public void setHistorialElo(List<Double> historialElo) {
 		this.historialElo = historialElo;
+	}
+
+	// ---- Participacion en torneos: la inscripcion de un empleado redefine estos metodos ----
+
+	/** Indica si esta inscripcion es la del usuario dado. */
+	public boolean correspondeA(Usuario usuario) {
+		return usuario != null && usuario.equals(socio);
+	}
+
+	/** Un socio paga la tarifa de inscripcion de los torneos competitivos. */
+	public boolean pagaInscripcionTorneo() {
+		return true;
+	}
+
+	/** Un socio puede recibir el premio en efectivo de un torneo competitivo. */
+	public boolean recibePremioEnEfectivo() {
+		return true;
 	}
 }
