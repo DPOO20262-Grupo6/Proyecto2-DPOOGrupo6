@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import enumeraciones.NivelHabilidad;
+import enumeraciones.TipoCupoTorneo;
 import usuarios.Socio;
 import usuarios.Usuario;
 
@@ -18,6 +19,7 @@ public class InscripcionDisciplinaIndividual implements Serializable {
 	private double rankingElo;
 	private Socio socio;
 	private List<Double> historialElo;
+	private TipoCupoTorneo tipoCupo = TipoCupoTorneo.REGULAR;
 
 	public InscripcionDisciplinaIndividual(Socio socio, String disciplina, NivelHabilidad nivel) {
 		this.socio = socio;
@@ -88,6 +90,14 @@ public class InscripcionDisciplinaIndividual implements Serializable {
 
 	public void setHistorialElo(List<Double> historialElo) {
 		this.historialElo = historialElo;
+	}
+	
+	public TipoCupoTorneo getTipoCupo() {
+		return tipoCupo;
+	}
+	
+	public void setTipoCupo(TipoCupoTorneo tipoCupo) {
+		this.tipoCupo = tipoCupo;
 	}
 
 	// ---- Participacion en torneos: la inscripcion de un empleado redefine estos metodos ----
