@@ -14,6 +14,7 @@ import enumeraciones.TipoTorneo;
 import estadisticas.EstadisticasPartidoIndividual;
 import inscripciones.InscripcionDisciplinaIndividual;
 import instalaciones.CanchaDeporteIndividual;
+import usuarios.Usuario;
 
 public class TorneoIndividual extends Torneo {
 
@@ -222,6 +223,45 @@ public class TorneoIndividual extends Torneo {
 			encuentros.add(sb.toString());
 		}
 		return encuentros;
+	}
+
+	// ---------------- Reglas de empleados (Integrante 3) ----------------
+
+	/** Devuelve la inscripcion del usuario en este torneo, o null si no esta inscrito. */
+	public InscripcionDisciplinaIndividual buscarParticipante(Usuario usuario) {
+		for (int i = 0; i < participantes.size(); i++) {
+			if (participantes.get(i).correspondeA(usuario)) {
+				return participantes.get(i);
+			}
+		}
+		return null;
+	}
+
+	/** Los empleados no pagan inscripcion: no cuentan para el total recaudado. */
+	@Override
+	public int getNumeroInscritosQuePagan() {
+		int cantidad = 0;
+		for (int i = 0; i < participantes.size(); i++) {
+			if (participantes.get(i).pagaInscripcionTorneo()) {
+				cantidad = cantidad + 1;
+			}
+		}
+		return cantidad;
+	}
+
+	/** Si el ganador es un empleado, el premio en efectivo pasa al mejor ubicado que no lo sea. */
+	@Override
+	public String getNombreBeneficiarioPremioEfectivo() {
+		if (getGanador() == null) {
+			return null;
+		}
+		List<InscripcionDisciplinaIndividual> ordenados = getParticipantesOrdenados();
+		for (int i = 0; i < ordenados.size(); i++) {
+			if (ordenados.get(i).recibePremioEnEfectivo()) {
+				return ordenados.get(i).getSocio().getNombre();
+			}
+		}
+		return null;
 	}
 
 	public Modalidad getModalidad() { return modalidad; }

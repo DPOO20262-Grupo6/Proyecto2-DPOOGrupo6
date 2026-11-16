@@ -11,6 +11,7 @@ import enumeraciones.TipoTorneo;
 
 public class TorneoEquipo extends Torneo {
 
+	private static final long serialVersionUID = 1L;
 
 	private List<Equipo> equipos;
 	private List<PartidoTorneo> partidos;

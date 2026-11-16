@@ -1165,4 +1165,26 @@ public class ClubDeportivoSeneca implements Serializable {
 	public TiendaDeportiva getTienda() { return tienda; }
 	public Cafeteria getCafeteria() { return cafeteria; }
 	public UbicacionInventario getBodegaCentral() { return bodegaCentral; }
+
+	/**
+	 * Se ejecuta cada vez que el club se lee de un archivo. Un archivo guardado con una version
+	 * anterior del programa no trae las listas que se agregaron despues: aqui se crean vacias
+	 * para que el club cargado quede siempre completo.
+	 */
+	private void readObject(ObjectInputStream entrada) throws IOException, ClassNotFoundException {
+		entrada.defaultReadObject();
+		if (socios == null) { socios = new ArrayList<Socio>(); }
+		if (empleados == null) { empleados = new ArrayList<EmpleadoDelClub>(); }
+		if (equipos == null) { equipos = new ArrayList<Equipo>(); }
+		if (instalaciones == null) { instalaciones = new ArrayList<InstalacionDeportiva>(); }
+		if (reservas == null) { reservas = new ArrayList<ReservaInstalacionDeporteIndividual>(); }
+		if (sesiones == null) { sesiones = new ArrayList<SesionDeEntrenamiento>(); }
+		if (partidosInternos == null) { partidosInternos = new ArrayList<PartidoInterno>(); }
+		if (turnos == null) { turnos = new ArrayList<TurnoEmpleado>(); }
+		if (inscripcionesIndividuales == null) { inscripcionesIndividuales = new ArrayList<InscripcionDisciplinaIndividual>(); }
+		if (torneos == null) { torneos = new ArrayList<Torneo>(); }
+		if (pagosMensualidades == null) { pagosMensualidades = new ArrayList<PagoMensualidad>(); }
+		if (partidosPractica == null) { partidosPractica = new ArrayList<PartidoDeporteIndividual>(); }
+		if (competencias == null) { competencias = new ArrayList<Competencia>(); }
+	}
 }
