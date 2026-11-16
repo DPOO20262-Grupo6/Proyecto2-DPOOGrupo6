@@ -71,15 +71,14 @@ public class TorneoEquipo extends Torneo {
 	}
 
 	public boolean retirar(Equipo equipo) {
-		if (equipo == null || haIniciado() || !estaInscrito(equipo)) {
-			return false;
-		}
-		TipoCupoTorneo tipoAsignado = tipoCupoPorEquipo.remove(equipo);
-		if (tipoAsignado == TipoCupoTorneo.PREFERENCIAL) {
-			cuposPreferencialesOcupados--;
-		}
-		return equipos.remove(equipo);
-	}
+        if (haIniciado()) throw new IllegalStateException("No se puede retirar, el torneo ya inició.");
+        if (!estaInscrito(equipo)) throw new IllegalArgumentException("El equipo no está inscrito.");
+
+        TipoCupoTorneo tipoAsignado = tipoCupoPorEquipo.remove(equipo);
+        if (tipoAsignado == TipoCupoTorneo.PREFERENCIAL) cuposPreferencialesOcupados--;
+        equipos.remove(equipo);
+        return true;
+    }
 
 	public boolean estaInscrito(Equipo equipo) {
 		return equipo != null && equipos.contains(equipo);

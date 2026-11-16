@@ -10,9 +10,11 @@ import deportesIndividuales.PartidoTenis;
 import deportesIndividuales.PartidoTenisDeMesa;
 import enumeraciones.EstadoTorneo;
 import enumeraciones.Modalidad;
+import enumeraciones.TipoCupoTorneo;
 import enumeraciones.TipoTorneo;
 import estadisticas.EstadisticasPartidoIndividual;
 import inscripciones.InscripcionDisciplinaIndividual;
+import inscripciones.InscripcionTorneo;
 import instalaciones.CanchaDeporteIndividual;
 import usuarios.Usuario;
 
@@ -33,28 +35,57 @@ public class TorneoIndividual extends Torneo {
 		this.participantes = new ArrayList<InscripcionDisciplinaIndividual>();
 		this.partidos = new ArrayList<PartidoDeporteIndividual>();
 	}
-
-	// ---------------- Inscripcion (Integrante 2) ----------------
-
+	
 	public boolean inscribir(InscripcionDisciplinaIndividual participante) {
-		if (participante == null || getEstado() != EstadoTorneo.EN_CURSO || haIniciado()) {
+		try {
+			return inscribir(participante, false);
+		} catch (RuntimeException e) {
 			return false;
 		}
-		if (estaInscrito(participante) || cuposDisponibles() <= 0) {
-			return false;
+	}
+	
+	public boolean inscribir(InscripcionDisciplinaIndividual participante, boolean tieneBuenRanking) {
+		if (participante == null) {
+			throw new IllegalArgumentException("El participante no puede estar vacio.");
 		}
-		if (!participante.getDisciplina().equalsIgnoreCase(getDeporte())) {
-			return false;
+		if (getEstado() != EstadoTorneo.EN_CURSO) {
+			throw new IllegalStateException("El torneo no esta abierto para inscripciones.");
 		}
+		if (haIniciado()) {
+			throw new IllegalStateException("El torneo ya ha iniciado.");
+		}
+		if (estaInscrito(participante)) {
+			throw new IllegalArgumentException("El participante ya esta inscrito.");
+		}
+		if (!getDeporte().equalsIgnoreCase(participante.getDisciplina())) {
+			throw new IllegalArgumentException("El participante no pertenece al deporte del torneo.");
+		}
+
+		TipoCupoTorneo asignado;
+		if (tieneBuenRanking && cuposPreferencialesDisponibles() > 0) {
+			asignado = TipoCupoTorneo.PREFERENCIAL;
+			cuposPreferencialesOcupados++;
+		} else if (cuposRegularesDisponibles() > 0) {
+			asignado = TipoCupoTorneo.REGULAR;
+		} else {
+			throw new IllegalStateException("No hay cupos disponibles.");
+		}
+
+		participante.setTipoCupo(asignado);
 		participantes.add(participante);
 		return true;
 	}
+
 
 	public boolean retirar(InscripcionDisciplinaIndividual participante) {
 		if (participante == null || haIniciado()) {
 			return false;
 		}
-		return participantes.remove(participante);
+		boolean eliminado = participantes.remove(participante);
+		if (eliminado && participante.getTipoCupo() == TipoCupoTorneo.PREFERENCIAL) {
+			cuposPreferencialesOcupados--;
+		}
+		return eliminado;
 	}
 
 	public boolean estaInscrito(InscripcionDisciplinaIndividual participante) {
