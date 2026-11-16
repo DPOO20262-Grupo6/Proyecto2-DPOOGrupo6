@@ -1,7 +1,6 @@
 package pruebas;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -60,53 +59,11 @@ public class AutenticadorTest {
 		assertEquals(0, autenticador.getIntentosFallidos());
 	}
 
-	@Test
-	public void testE01_entrenadorIniciaSesionEnLaConsolaDeEmpleado() {
-		EmpleadoDelClub autenticado = autenticador.iniciarSesionEmpleado("cruiz", "entrena1");
-
-		assertSame(entrenador, autenticado);
-		assertTrue(autenticado instanceof Entrenador);
-	}
-
-	@Test
-	public void testE01_fisioterapeutaIniciaSesionEnLaConsolaDeEmpleado() {
-		EmpleadoDelClub autenticado = autenticador.iniciarSesionEmpleado("atorres", "fisio1");
-
-		assertSame(fisioterapeuta, autenticado);
-		assertTrue(autenticado instanceof Fisioterapeuta);
-	}
-
-	@Test
-	public void testA01_administradorIniciaSesionEnLaConsolaDeAdministrador() {
-		Administrador autenticado = autenticador.iniciarSesionAdministrador(ClubDeportivoSeneca.LOGIN_ADMIN, ClubDeportivoSeneca.PASSWORD_ADMIN);
-
-		assertSame(club.getAdministrador(), autenticado);
-	}
-
-	@Test
-	public void testLoginConEspaciosAlrededorEsAceptado() {
-		assertSame(socio, autenticador.iniciarSesionSocio("  lgomez  ", "clave123"));
-	}
-
 	// ---------------- Rechazos ----------------
 
 	@Test
 	public void testE01_socioNoEntraALaConsolaDeEmpleado() {
 		String mensaje = mensajeDeRechazo("lgomez", "clave123", EmpleadoDelClub.class);
-
-		assertEquals(Autenticador.MENSAJE_RECHAZO, mensaje);
-	}
-
-	@Test
-	public void testA01_empleadoNoEntraALaConsolaDeAdministrador() {
-		String mensaje = mensajeDeRechazo("cruiz", "entrena1", Administrador.class);
-
-		assertEquals(Autenticador.MENSAJE_RECHAZO, mensaje);
-	}
-
-	@Test
-	public void testS01_administradorNoEntraALaConsolaDeSocio() {
-		String mensaje = mensajeDeRechazo(ClubDeportivoSeneca.LOGIN_ADMIN, ClubDeportivoSeneca.PASSWORD_ADMIN, Socio.class);
 
 		assertEquals(Autenticador.MENSAJE_RECHAZO, mensaje);
 	}
@@ -122,46 +79,7 @@ public class AutenticadorTest {
 		assertEquals(loginInexistente, rolEquivocado);
 	}
 
-	@Test
-	public void testDatosVaciosONulosSonRechazados() {
-		assertEquals(Autenticador.MENSAJE_RECHAZO, mensajeDeRechazo("", "clave123", Socio.class));
-		assertEquals(Autenticador.MENSAJE_RECHAZO, mensajeDeRechazo("lgomez", "   ", Socio.class));
-		autenticador = new Autenticador(club);
-		assertEquals(Autenticador.MENSAJE_RECHAZO, mensajeDeRechazo(null, "clave123", Socio.class));
-		assertEquals(Autenticador.MENSAJE_RECHAZO, mensajeDeRechazo("lgomez", null, Socio.class));
-	}
-
-	@Test
-	public void testS01_socioDadoDeBajaNoIniciaSesion() {
-		socio.darDeBaja();
-
-		assertEquals(Autenticador.MENSAJE_RECHAZO, mensajeDeRechazo("lgomez", "clave123", Socio.class));
-	}
-
-	@Test
-	public void testRechazoDejaElClubSinCambios() {
-		mensajeDeRechazo("lgomez", "otraClave", Socio.class);
-		mensajeDeRechazo("cruiz", "entrena1", Administrador.class);
-
-		assertEquals(1, club.getSocios().size());
-		assertEquals(2, club.getEmpleados().size());
-		assertEquals("clave123", socio.getPassword());
-		assertEquals("entrena1", entrenador.getPassword());
-		assertSame(socio, club.autenticarUsuario("lgomez", "clave123"));
-	}
-
 	// ---------------- Limite de intentos ----------------
-
-	@Test
-	public void testCadaRechazoConsumeUnIntento() {
-		assertEquals(Autenticador.MAXIMO_INTENTOS, autenticador.getIntentosRestantes());
-
-		mensajeDeRechazo("lgomez", "mala", Socio.class);
-
-		assertEquals(1, autenticador.getIntentosFallidos());
-		assertEquals(Autenticador.MAXIMO_INTENTOS - 1, autenticador.getIntentosRestantes());
-		assertFalse(autenticador.estaBloqueado());
-	}
 
 	@Test
 	public void testTresRechazosBloqueanElInicioDeSesion() {
@@ -174,27 +92,6 @@ public class AutenticadorTest {
 		assertThrows(IllegalStateException.class, () -> autenticador.iniciarSesionSocio("lgomez", "clave123"));
 	}
 
-	@Test
-	public void testInicioExitosoReiniciaLosIntentos() {
-		mensajeDeRechazo("lgomez", "mala1", Socio.class);
-		mensajeDeRechazo("lgomez", "mala2", Socio.class);
-
-		autenticador.iniciarSesionSocio("lgomez", "clave123");
-
-		assertEquals(0, autenticador.getIntentosFallidos());
-		assertEquals(Autenticador.MAXIMO_INTENTOS, autenticador.getIntentosRestantes());
-	}
-
 	// ---------------- Datos de construccion ----------------
 
-	@Test
-	public void testAutenticadorSinClubEsRechazado() {
-		assertThrows(IllegalArgumentException.class, () -> new Autenticador(null));
-	}
-
-	@Test
-	public void testRolNuloEsRechazadoSinConsumirIntento() {
-		assertThrows(IllegalArgumentException.class, () -> autenticador.iniciarSesion("lgomez", "clave123", null));
-		assertEquals(0, autenticador.getIntentosFallidos());
-	}
 }

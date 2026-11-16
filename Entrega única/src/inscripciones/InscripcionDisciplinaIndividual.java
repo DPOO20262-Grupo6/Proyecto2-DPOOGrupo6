@@ -3,6 +3,7 @@ package inscripciones;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import articulosYVentas.Bono;
 import enumeraciones.NivelHabilidad;
 import enumeraciones.TipoCupoTorneo;
 import usuarios.Socio;
@@ -115,5 +116,12 @@ public class InscripcionDisciplinaIndividual implements Serializable {
 	/** Un socio puede recibir el premio en efectivo de un torneo competitivo. */
 	public boolean recibePremioEnEfectivo() {
 		return true;
+	}
+
+	/** El bono de un torneo recreativo se guarda en el socio. Quien no tiene cuenta de socio no lo recibe. */
+	public void recibirBono(Bono bono) {
+		if (socio != null) {
+			socio.agregarBono(bono);
+		}
 	}
 }

@@ -3,7 +3,9 @@ package Torneos;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import deportesIndividuales.PartidoDeporteIndividual;
 import deportesIndividuales.PartidoPadel;
 import deportesIndividuales.PartidoTenis;
@@ -25,6 +27,7 @@ public class TorneoIndividual extends Torneo {
 	private Modalidad modalidad;
 	private List<InscripcionDisciplinaIndividual> participantes;
 	private List<PartidoDeporteIndividual> partidos;
+	private Map<InscripcionDisciplinaIndividual, InscripcionDisciplinaIndividual> parejas;
 
 	public TorneoIndividual(String id, String nombre, String deporte, Modalidad modalidad, String categoria, int cuposTotales, TipoTorneo tipo, LocalDate fechaInicio, double tarifaInscripcion, double valorBono) throws Exception {
 		super(id, nombre, deporte, categoria, cuposTotales, tipo, fechaInicio, tarifaInscripcion, valorBono);
@@ -81,11 +84,77 @@ public class TorneoIndividual extends Torneo {
 		if (participante == null || haIniciado()) {
 			return false;
 		}
+		boolean eliminado = quitar(participante);
+		if (eliminado) {
+			InscripcionDisciplinaIndividual pareja = getParejas().remove(participante);
+			if (pareja != null) {
+				getParejas().remove(pareja);
+				quitar(pareja);
+			}
+		}
+		return eliminado;
+	}
+
+	/** Saca al participante de la lista y, si ocupaba un cupo preferencial, lo libera. */
+	private boolean quitar(InscripcionDisciplinaIndividual participante) {
 		boolean eliminado = participantes.remove(participante);
 		if (eliminado && participante.getTipoCupo() == TipoCupoTorneo.PREFERENCIAL) {
 			cuposPreferencialesOcupados--;
 		}
 		return eliminado;
+	}
+
+	// ---------------- Parejas (torneos de dobles) ----------------
+
+	/**
+	 * Inscribe a dos jugadores como pareja: o quedan inscritos los dos o no queda ninguno.
+	 * Cada jugador ocupa un cupo. Al retirarse uno, se retira tambien su pareja.
+	 */
+	public boolean inscribirPareja(InscripcionDisciplinaIndividual primero, InscripcionDisciplinaIndividual segundo, boolean tienenBuenRanking) {
+		if (modalidad != Modalidad.DOBLES) {
+			throw new IllegalStateException("Solo los torneos de dobles admiten parejas.");
+		}
+		if (primero == null || segundo == null) {
+			throw new IllegalArgumentException("Debe indicar los dos jugadores de la pareja.");
+		}
+		if (primero == segundo || primero.getSocio() == segundo.getSocio()) {
+			throw new IllegalArgumentException("La pareja debe estar formada por dos jugadores distintos.");
+		}
+		inscribir(primero, tienenBuenRanking);
+		try {
+			inscribir(segundo, tienenBuenRanking);
+		} catch (RuntimeException e) {
+			quitar(primero);
+			throw e;
+		}
+		getParejas().put(primero, segundo);
+		getParejas().put(segundo, primero);
+		return true;
+	}
+
+	/** Pareja con la que se inscribio el jugador, o null si se inscribio solo. */
+	public InscripcionDisciplinaIndividual getPareja(InscripcionDisciplinaIndividual participante) {
+		return getParejas().get(participante);
+	}
+
+	private Map<InscripcionDisciplinaIndividual, InscripcionDisciplinaIndividual> getParejas() {
+		if (parejas == null) {
+			parejas = new HashMap<InscripcionDisciplinaIndividual, InscripcionDisciplinaIndividual>();
+		}
+		return parejas;
+	}
+
+	/** En dobles tambien gana la pareja del ganador. */
+	@Override
+	protected List<Object> getGanadoresDelBono() {
+		List<Object> ganadores = super.getGanadoresDelBono();
+		if (!ganadores.isEmpty()) {
+			InscripcionDisciplinaIndividual pareja = getPareja((InscripcionDisciplinaIndividual) ganadores.get(0));
+			if (pareja != null) {
+				ganadores.add(pareja);
+			}
+		}
+		return ganadores;
 	}
 
 	public boolean estaInscrito(InscripcionDisciplinaIndividual participante) {

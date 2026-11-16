@@ -9,18 +9,21 @@ import Torneos.Torneo;
 import Torneos.TorneoIndividual;
 import club.ClubDeportivoSeneca;
 import enumeraciones.TipoTorneo;
+import persistencia.PersistenciaClub;
+import persistencia.PersistenciaException;
 import usuarios.Administrador;
 import usuarios.Usuario;
 
 
 public class ConsolaAdministrador {
 
-	private static final String RUTA_DATOS = "./datos";
 	private static final String MENSAJE_NO_EXISTE = "El torneo no existe";
 
 	private ClubDeportivoSeneca club;
 	private Scanner scanner;
 	private Administrador administrador;
+	/** Misma carga y guardado que las demas consolas: encuentra la carpeta de datos sin importar desde donde se ejecute. */
+	private PersistenciaClub persistencia = new PersistenciaClub();
 
 	public ConsolaAdministrador(ClubDeportivoSeneca club) {
 		this.club = club;
@@ -28,12 +31,21 @@ public class ConsolaAdministrador {
 	}
 
 	public static void main(String[] args) {
-		ClubDeportivoSeneca club = new ClubDeportivoSeneca();
+		PersistenciaClub persistencia = new PersistenciaClub();
+		ClubDeportivoSeneca club;
 		try {
-			club.cargarDatos(RUTA_DATOS);
-			System.out.println("Datos cargados desde " + RUTA_DATOS);
-		} catch (Exception e) {
-			System.out.println("No se pudieron cargar datos previos (" + e.getMessage() + "). Se inicia un club vacio.");
+			boolean hayDatos = persistencia.existenDatos();
+			club = persistencia.cargar();
+			if (hayDatos) {
+				System.out.println("Datos cargados desde " + persistencia.getArchivoDatos().getPath());
+			} else {
+				System.out.println("No hay datos guardados en " + persistencia.getCarpeta().getPath() + ": se inicia un club nuevo.");
+			}
+		} catch (PersistenciaException e) {
+			// Un archivo danado no se reemplaza por un club vacio: se cierra para no perder los datos.
+			System.out.println(e.getMessage());
+			System.out.println("La consola se cierra sin modificar el archivo de datos.");
+			return;
 		}
 		ConsolaAdministrador consola = new ConsolaAdministrador(club);
 		consola.ejecutar();
@@ -252,8 +264,8 @@ public class ConsolaAdministrador {
 
 	private void guardarYSalir() {
 		try {
-			club.guardarDatos(RUTA_DATOS);
-			System.out.println("Datos guardados en " + RUTA_DATOS + ". Hasta luego.");
+			persistencia.guardar(club);
+			System.out.println("Datos guardados en " + persistencia.getCarpeta().getPath() + ". Hasta luego.");
 		} catch (Exception e) {
 			System.out.println("No se pudieron guardar los datos: " + e.getMessage());
 		}

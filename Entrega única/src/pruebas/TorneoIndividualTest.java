@@ -391,8 +391,9 @@ public class TorneoIndividualTest {
 	public void testInscripcionRechazadaSiNoHayCupos() throws Exception {
 		TorneoIndividual pequeno = new TorneoIndividual("T7", "Mini", "TENIS", Modalidad.SENCILLOS, "Abierta", 2,
 				TipoTorneo.RECREATIVO, fechaInicio, 0, 10000);
+		// 2 cupos: 1 regular y 1 preferencial. El preferencial solo lo toma un jugador con buen ranking.
 		assertTrue(pequeno.inscribir(ana));
-		assertTrue(pequeno.inscribir(beto));
+		assertTrue(pequeno.inscribir(beto, true));
 		assertFalse(pequeno.inscribir(crearJugador("Carla", "TENIS")));
 		assertEquals(2, pequeno.getNumeroInscritos());
 	}

@@ -374,8 +374,9 @@ public class TorneoEquipoTest {
 	public void testInscripcionRechazadaSiNoHayCupos() throws Exception {
 		TorneoEquipo pequeno = new TorneoEquipo("E6", "Mini", "BALONCESTO", "MAYORES", 2,
 				TipoTorneo.RECREATIVO, fechaInicio, 0, 10000);
+		// 2 cupos: 1 regular y 1 preferencial. El preferencial solo lo toma un equipo con buen ranking.
 		assertTrue(pequeno.inscribir(halcones));
-		assertTrue(pequeno.inscribir(tigres));
+		assertTrue(pequeno.inscribir(tigres, true));
 		assertFalse(pequeno.inscribir(crearEquipo("Leones")));
 		assertEquals(2, pequeno.getNumeroInscritos());
 	}

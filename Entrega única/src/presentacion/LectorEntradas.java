@@ -113,6 +113,21 @@ public class LectorEntradas {
 		}
 	}
 
+	/** Fecha con formato AAAA-MM-DD que se puede dejar vacia: en ese caso devuelve null. */
+	public LocalDate leerFechaOpcional(String mensaje) {
+		while (true) {
+			String texto = leerLinea(mensaje);
+			if (texto.isEmpty()) {
+				return null;
+			}
+			try {
+				return LocalDate.parse(texto);
+			} catch (DateTimeParseException e) {
+				mostrar("Dato invalido: use una fecha real con el formato AAAA-MM-DD, o deje vacio para omitirla.");
+			}
+		}
+	}
+
 	/** Fecha igual o posterior a la fecha minima. */
 	public LocalDate leerFechaDesde(String mensaje, LocalDate minima) {
 		while (true) {

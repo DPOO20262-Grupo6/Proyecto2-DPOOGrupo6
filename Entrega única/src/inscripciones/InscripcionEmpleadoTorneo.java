@@ -1,5 +1,6 @@
 package inscripciones;
 
+import articulosYVentas.Bono;
 import enumeraciones.NivelHabilidad;
 import usuarios.EmpleadoDelClub;
 import usuarios.Socio;
@@ -52,6 +53,11 @@ public class InscripcionEmpleadoTorneo extends InscripcionDisciplinaIndividual {
 	@Override
 	public boolean recibePremioEnEfectivo() {
 		return false;
+	}
+
+	/** El empleado no tiene cuenta de socio: no guarda bonos de torneos. */
+	@Override
+	public void recibirBono(Bono bono) {
 	}
 
 	public double getValorPagado() {

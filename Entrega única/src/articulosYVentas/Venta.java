@@ -19,6 +19,7 @@ public abstract class Venta implements Serializable {
 	protected int puntosFidelidadUtilizados;
 	private Usuario comprador;
 	protected List<DetalleVenta> detalles;
+	private Bono bonoAplicado;
 
 	public Venta(LocalDate fecha, Usuario comprador) {
 		this.fecha = fecha;
@@ -67,6 +68,9 @@ public abstract class Venta implements Serializable {
 			comprador.redimirPuntos(puntosFidelidadUtilizados);
 		}
 		comprador.acumularPuntos(generados);
+		if (bonoAplicado != null) {
+			bonoAplicado.usar();
+		}
 	}
 
 	public double calcularSubtotal() {
@@ -171,6 +175,11 @@ public abstract class Venta implements Serializable {
 		this.detalles = detalles;
 	}
 	
+	/**
+	 * Aplica un bono como descuento sobre el subtotal. El bono NO se gasta aqui: se marca como usado
+	 * solo cuando la compra se confirma (registrarPuntos), asi un rechazo por falta de existencias
+	 * no le quita el bono al socio. Un bono de valor fijo se calcula con los articulos ya agregados.
+	 */
 	public void aplicarBono(Bono bono) {
 		if (bono == null || bono.isUsado()) {
             throw new IllegalArgumentException("El bono no es válido o ya fue usado.");
@@ -178,7 +187,19 @@ public abstract class Venta implements Serializable {
 		if (this.descuentoAplicado > 0 || this.puntosFidelidadUtilizados > 0) {
 			throw new IllegalStateException("No se pueden acumular descuentos.");
 		}
-		this.descuentoAplicado = bono.getPorcentajeDescuento() / 100.0;
-		bono.usar();	
+		if (bono.esPorValor()) {
+			double subtotal = calcularSubtotal();
+			if (subtotal <= 0) {
+				throw new IllegalStateException("Agregue articulos a la compra antes de aplicar el bono.");
+			}
+			this.descuentoAplicado = Math.min(1.0, bono.getValorFijo() / subtotal);
+		} else {
+			this.descuentoAplicado = bono.getPorcentajeDescuento() / 100.0;
+		}
+		this.bonoAplicado = bono;
+	}
+
+	public Bono getBonoAplicado() {
+		return bonoAplicado;
 	}
 }

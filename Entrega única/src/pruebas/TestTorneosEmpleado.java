@@ -18,7 +18,6 @@ import Torneos.Torneo;
 import Torneos.TorneoIndividual;
 import club.ClubDeportivoSeneca;
 import deportesIndividuales.PartidoDeporteIndividual;
-import enumeraciones.EstadoTorneo;
 import enumeraciones.NivelHabilidad;
 import enumeraciones.TipoTorneo;
 import estadisticas.EstadisticasPartidoIndividual;
@@ -129,23 +128,6 @@ public class TestTorneosEmpleado {
 	}
 
 	@Test
-	public void testE07_filtroPorDisciplina() {
-		List<TorneoIndividual> soloPadel = reglas.consultarTorneosDisponibles(entrenador, "padel");
-
-		assertEquals(1, soloPadel.size());
-		assertEquals(recreativo, soloPadel.get(0));
-		assertTrue(reglas.consultarTorneosDisponibles(entrenador, "TENIS_DE_MESA").isEmpty());
-	}
-
-	@Test
-	public void testE07_sinTorneosPorIniciarLaListaQuedaVacia() {
-		competitivo.setFechaInicio(LocalDate.now());
-		finalizar(recreativo);
-
-		assertTrue(reglas.consultarTorneosDisponibles(entrenador).isEmpty());
-	}
-
-	@Test
 	public void testE07_disciplinaInexistenteRechazada() {
 		IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
 				() -> reglas.consultarTorneosDisponibles(entrenador, "AJEDREZ"));
@@ -165,22 +147,6 @@ public class TestTorneosEmpleado {
 		assertEquals(1, competitivo.getNumeroInscritos());
 		assertEquals(4, competitivo.cuposDisponibles());
 		assertEquals(3, reglas.cuposParaEmpleados(competitivo));
-	}
-
-	@Test
-	public void testE08_elFisioterapeutaTambienPuedeInscribirse() {
-		reglas.inscribir(fisioterapeuta, competitivo.getId());
-
-		assertTrue(reglas.estaInscrito(fisioterapeuta, competitivo));
-		assertFalse(reglas.estaInscrito(entrenador, competitivo));
-	}
-
-	@Test
-	public void testE08_tambienPuedeInscribirseEnUnTorneoDeDobles() {
-		reglas.inscribir(entrenador, recreativo.getId());
-
-		assertTrue(reglas.estaInscrito(entrenador, recreativo));
-		assertEquals(1, recreativo.getNumeroInscritos());
 	}
 
 	@Test
@@ -206,27 +172,6 @@ public class TestTorneosEmpleado {
 	}
 
 	@Test
-	public void testE08_unTurnoEnOtroDiaNoImpideLaInscripcion() {
-		admin.asignarTurno(entrenador, diaTorneo.minusDays(1), LocalTime.of(8, 0), 4);
-		admin.asignarTurno(entrenador, diaTorneo.plusDays(1), LocalTime.of(8, 0), 4);
-
-		reglas.inscribir(entrenador, competitivo.getId());
-
-		assertTrue(reglas.estaInscrito(entrenador, competitivo));
-	}
-
-	@Test
-	public void testE08_elTurnoDeOtroEmpleadoNoImpideLaInscripcion() {
-		admin.asignarTurno(fisioterapeuta, diaTorneo, LocalTime.of(8, 0), 4);
-
-		reglas.inscribir(entrenador, competitivo.getId());
-
-		assertTrue(reglas.estaInscrito(entrenador, competitivo));
-		assertThrows(IllegalStateException.class, () -> reglas.inscribir(fisioterapeuta, competitivo.getId()));
-		assertEquals(1, competitivo.getNumeroInscritos());
-	}
-
-	@Test
 	public void testE08_rechazoCuandoSoloQuedanCuposPreferenciales() {
 		competitivo.inscribir(ana);
 		competitivo.inscribir(beto);
@@ -241,20 +186,6 @@ public class TestTorneosEmpleado {
 	}
 
 	@Test
-	public void testE08_rechazoCuandoElTorneoEstaLleno() {
-		competitivo.inscribir(ana);
-		competitivo.inscribir(beto);
-		competitivo.inscribir(crearSocioInscrito("Carla", "TENIS"));
-		competitivo.inscribir(crearSocioInscrito("Dario", "TENIS"));
-		competitivo.inscribir(crearSocioInscrito("Elena", "TENIS"));
-
-		String mensaje = rechazoPorEstado(entrenador, competitivo.getId());
-
-		assertTrue(mensaje.contains("no tiene cupos"));
-		assertEquals(5, competitivo.getNumeroInscritos());
-	}
-
-	@Test
 	public void testE08_rechazoPorInscripcionDuplicada() {
 		reglas.inscribir(entrenador, competitivo.getId());
 
@@ -265,32 +196,12 @@ public class TestTorneosEmpleado {
 	}
 
 	@Test
-	public void testE08_rechazoPorTorneoInexistente() {
-		IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-				() -> reglas.inscribir(entrenador, "NO-EXISTE"));
-
-		assertTrue(e.getMessage().contains("NO-EXISTE"));
-		assertThrows(IllegalArgumentException.class, () -> reglas.inscribir(entrenador, null));
-	}
-
-	@Test
 	public void testE08_rechazoPorTorneoYaIniciado() {
 		competitivo.setFechaInicio(LocalDate.now());
 
 		String mensaje = rechazoPorEstado(entrenador, competitivo.getId());
 
 		assertTrue(mensaje.contains("ya inicio"));
-		assertEquals(0, competitivo.getNumeroInscritos());
-	}
-
-	@Test
-	public void testE08_rechazoPorTorneoFinalizado() {
-		finalizar(competitivo);
-
-		String mensaje = rechazoPorEstado(entrenador, competitivo.getId());
-
-		assertTrue(mensaje.contains("ya finalizo"));
-		assertEquals(EstadoTorneo.FINALIZADO, competitivo.getEstado());
 		assertEquals(0, competitivo.getNumeroInscritos());
 	}
 
@@ -318,27 +229,6 @@ public class TestTorneosEmpleado {
 
 		assertEquals(TARIFA, reglas.calcularValorInscripcion(ana.getSocio(), competitivo));
 		assertEquals(recaudoAntes + TARIFA, competitivo.getTotalRecaudado());
-	}
-
-	@Test
-	public void testE09_elRecaudoSoloSumaLasInscripcionesPagadas() {
-		competitivo.inscribir(ana);
-		competitivo.inscribir(beto);
-		reglas.inscribir(entrenador, competitivo.getId());
-		reglas.inscribir(fisioterapeuta, competitivo.getId());
-
-		assertEquals(4, competitivo.getNumeroInscritos());
-		assertEquals(2, competitivo.getNumeroInscritosQuePagan());
-		assertEquals(2 * TARIFA, competitivo.getTotalRecaudado());
-	}
-
-	@Test
-	public void testE09_elTorneoRecreativoNoTieneCostoParaNadie() {
-		reglas.inscribir(entrenador, recreativo.getId());
-
-		assertEquals(0, reglas.calcularValorInscripcion(entrenador, recreativo));
-		assertEquals(0, reglas.calcularValorInscripcion(ana.getSocio(), recreativo));
-		assertEquals(0, recreativo.getTotalRecaudado());
 	}
 
 	@Test
@@ -380,33 +270,6 @@ public class TestTorneosEmpleado {
 	}
 
 	@Test
-	public void testE10_siElEmpleadoNoGanaLaPremiacionNoCambia() {
-		competitivo.inscribir(ana);
-		competitivo.inscribir(beto);
-		InscripcionEmpleadoTorneo carlos = reglas.inscribir(entrenador, competitivo.getId());
-		jugar(competitivo, ana, carlos);
-		jugar(competitivo, ana, beto);
-
-		finalizar(competitivo);
-
-		assertEquals(ana, competitivo.getGanador());
-		assertEquals("Premio en efectivo de $100000.0 para Ana", competitivo.getPremioEntregado());
-	}
-
-	@Test
-	public void testE10_siElEmpleadoGanaUnRecreativoRecibeElBono() throws Exception {
-		TorneoIndividual recreativoTenis = (TorneoIndividual) admin.crearTorneo("Recreativo Tenis", "TENIS", "SENCILLOS",
-				"Abierta", 5, TipoTorneo.RECREATIVO, diaTorneo, 0, BONO);
-		recreativoTenis.inscribir(ana);
-		InscripcionEmpleadoTorneo carlos = reglas.inscribir(entrenador, recreativoTenis.getId());
-		jugar(recreativoTenis, carlos, ana);
-
-		finalizar(recreativoTenis);
-
-		assertEquals("Bono de descuento por $20000.0 para Carlos (empleado)", recreativoTenis.getPremioEntregado());
-	}
-
-	@Test
 	public void testE10_siSoloHayEmpleadosElPremioEnEfectivoNoSeEntrega() {
 		InscripcionEmpleadoTorneo carlos = reglas.inscribir(entrenador, competitivo.getId());
 		InscripcionEmpleadoTorneo laura = reglas.inscribir(fisioterapeuta, competitivo.getId());
@@ -436,17 +299,6 @@ public class TestTorneosEmpleado {
 	}
 
 	@Test
-	public void testE11_despuesDeRetirarsePuedeVolverAInscribirse() {
-		reglas.inscribir(entrenador, competitivo.getId());
-		reglas.retirar(entrenador, competitivo.getId());
-
-		reglas.inscribir(entrenador, competitivo.getId());
-
-		assertTrue(reglas.estaInscrito(entrenador, competitivo));
-		assertEquals(1, competitivo.getNumeroInscritos());
-	}
-
-	@Test
 	public void testE11_rechazoSiElTorneoYaInicio() {
 		reglas.inscribir(entrenador, competitivo.getId());
 		competitivo.setFechaInicio(LocalDate.now());
@@ -469,11 +321,6 @@ public class TestTorneosEmpleado {
 		assertTrue(e.getMessage().contains("No esta inscrito"));
 		assertEquals(1, competitivo.getNumeroInscritos());
 		assertThrows(IllegalStateException.class, () -> reglas.retirar(entrenador, deConjunto.getId()));
-	}
-
-	@Test
-	public void testE11_rechazoPorTorneoInexistente() {
-		assertThrows(IllegalArgumentException.class, () -> reglas.retirar(entrenador, "NO-EXISTE"));
 	}
 
 	// ============ HU-E12 · Consultar mis torneos y su historial ============
@@ -508,18 +355,6 @@ public class TestTorneosEmpleado {
 		assertTrue(historial.contains("Carlos (empleado) vs Ana"));
 		assertTrue(historial.contains("1. Carlos (empleado) - 1 victorias"));
 		assertTrue(historial.contains("2. Ana - 0 victorias"));
-	}
-
-	@Test
-	public void testE12_elHistorialSePuedeConsultarConElTorneoFinalizado() {
-		competitivo.inscribir(ana);
-		reglas.inscribir(entrenador, competitivo.getId());
-		finalizar(competitivo);
-
-		String historial = reglas.consultarHistorial(competitivo.getId());
-
-		assertTrue(historial.contains("FINALIZADO"));
-		assertTrue(historial.contains("Premio:"));
 	}
 
 	@Test

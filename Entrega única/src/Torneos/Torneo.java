@@ -3,11 +3,13 @@ package Torneos;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import articulosYVentas.Bono;
 import deportesDeConjunto.Equipo;
 import enumeraciones.EstadoTorneo;
 import enumeraciones.TipoTorneo;
+import inscripciones.InscripcionDisciplinaIndividual;
 import inscripciones.InscripcionEquipo;
 import inscripciones.InscripcionTorneo;
 import usuarios.Socio;
@@ -31,6 +33,7 @@ public abstract class Torneo implements Serializable {
 	private double tarifaInscripcion;
 	private double valorBono;
 	private String premioEntregado;
+	private boolean bonoOtorgado;
 
 	public Torneo(String id, String nombre, String deporte, String categoria, int cuposTotales, TipoTorneo tipo, LocalDate fechaInicio, double tarifaInscripcion, double valorBono) throws Exception {
 		if (id == null || id.trim().isEmpty()) {
@@ -130,6 +133,7 @@ public abstract class Torneo implements Serializable {
 		}
 		if (tipo == TipoTorneo.RECREATIVO) {
 			premioEntregado = "Bono de descuento por $" + valorBono + " para " + nombreGanador;
+			entregarBonos();
 		} else {
 			double bolsa = getTotalRecaudado();
 			String beneficiario = getNombreBeneficiarioPremioEfectivo();
@@ -204,25 +208,54 @@ public abstract class Torneo implements Serializable {
 		return sb.toString();
 	}
 	
-	protected void otorgarBonoGanador (Object ganador) {
-		String codigoBono = "BONO-" + id + "-" + System.currentTimeMillis();
+	/**
+	 * Entrega el bono de un torneo recreativo a quienes ganaron. Se ejecuta una sola vez, al finalizar.
+	 * El valor del bono que define el administrador es un valor en pesos que se descuenta de una compra.
+	 */
+	private void entregarBonos() {
+		if (bonoOtorgado || valorBono <= 0) {
+			return;
+		}
+		bonoOtorgado = true;
+		List<Object> ganadores = getGanadoresDelBono();
+		for (int i = 0; i < ganadores.size(); i++) {
+			otorgarBonoGanador(ganadores.get(i));
+		}
+	}
 
+	/** Ganadores que reciben bono: normalmente el ganador del torneo. Los torneos de parejas agregan a la pareja. */
+	protected List<Object> getGanadoresDelBono() {
+		List<Object> ganadores = new ArrayList<Object>();
+		Object ganador = getGanador();
+		if (ganador != null) {
+			ganadores.add(ganador);
+		}
+		return ganadores;
+	}
+
+	private Bono nuevoBono(String sufijo) {
+		return Bono.porValor("BONO-" + id + "-" + sufijo + "-" + System.nanoTime(), valorBono);
+	}
+
+	protected void otorgarBonoGanador (Object ganador) {
 		if (ganador instanceof Socio) {
-			((Socio) ganador).agregarBono(new Bono(codigoBono, valorBono));
+			((Socio) ganador).agregarBono(nuevoBono("S"));
+		} else if (ganador instanceof InscripcionDisciplinaIndividual) {
+			((InscripcionDisciplinaIndividual) ganador).recibirBono(nuevoBono("J"));
 		} else if (ganador instanceof Equipo) {
 			Equipo eq = (Equipo) ganador;
 			for (InscripcionEquipo ie : eq.getInscripciones()) {
-				if (ie.getSocio() != null) {
-					ie.getSocio().agregarBono(new Bono(codigoBono + "-" + System.nanoTime(), valorBono));
+				if (ie.isActiva() && ie.getSocio() != null) {
+					ie.getSocio().agregarBono(nuevoBono("E"));
 				}
 			}
 		} else if (ganador instanceof InscripcionTorneo) {
 			InscripcionTorneo it = (InscripcionTorneo) ganador;
 			if (it.getUsuario() instanceof Socio) {
-				((Socio) it.getUsuario()).agregarBono(new Bono(codigoBono + "-A", valorBono));
+				((Socio) it.getUsuario()).agregarBono(nuevoBono("A"));
 			}
 			if (it.getParejaUsuario() instanceof Socio) {
-				((Socio) it.getParejaUsuario()).agregarBono(new Bono(codigoBono + "-B", valorBono));
+				((Socio) it.getParejaUsuario()).agregarBono(nuevoBono("B"));
 			}
 		}
 	}
