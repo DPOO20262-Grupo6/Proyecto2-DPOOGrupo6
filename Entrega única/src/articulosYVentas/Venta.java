@@ -170,4 +170,15 @@ public abstract class Venta implements Serializable {
 	public void setDetalles(List<DetalleVenta> detalles) {
 		this.detalles = detalles;
 	}
+	
+	public void aplicarBono(Bono bono) {
+		if (bono == null || bono.isUsado()) {
+            throw new IllegalArgumentException("El bono no es válido o ya fue usado.");
+		}
+		if (this.descuentoAplicado > 0 || this.puntosFidelidadUtilizados > 0) {
+			throw new IllegalStateException("No se pueden acumular descuentos.");
+		}
+		this.descuentoAplicado = bono.getPorcentajeDescuento() / 100.0;
+		bono.usar();	
+	}
 }

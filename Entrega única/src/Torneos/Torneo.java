@@ -4,10 +4,17 @@ package Torneos;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.List;
+import articulosYVentas.Bono;
+import deportesDeConjunto.Equipo;
 import enumeraciones.EstadoTorneo;
 import enumeraciones.TipoTorneo;
+import inscripciones.InscripcionEquipo;
+import inscripciones.InscripcionTorneo;
+import usuarios.Socio;
 
 public abstract class Torneo implements Serializable {
+	
+	private static final long serialVersionUID = 1L;
 
 	private static final long serialVersionUID = 1L;
 
@@ -79,11 +86,26 @@ public abstract class Torneo implements Serializable {
 	}
 
 	public int cuposPreferencialesDisponibles() {
+		if (cuposPreferencialesLiberados) {
+			return 0;
+		}
 		return Math.max(0, cuposPreferenciales - cuposPreferencialesOcupados);
 	}
 
 	public int cuposRegularesDisponibles() {
-		return Math.max(0, cuposDisponibles() - cuposPreferencialesDisponibles());
+		int regularesTotal;
+		if (cuposPreferencialesLiberados) {
+			regularesTotal = cuposTotales - cuposPreferencialesOcupados;
+		} else {
+			regularesTotal = cuposTotales - cuposPreferenciales;
+		}
+		int ocupadosRegulares = getNumeroInscritos() - cuposPreferencialesOcupados;
+				
+		return Math.max(0, regularesTotal - ocupadosRegulares);
+	}
+	
+	public void liberarCuposPreferenciales() {
+		this.cuposPreferencialesLiberados = true;
 	}
 
 	public boolean haIniciado() {
@@ -181,6 +203,29 @@ public abstract class Torneo implements Serializable {
 			sb.append("Premio: ").append(premioEntregado).append("\n");
 		}
 		return sb.toString();
+	}
+	
+	protected void otorgarBonoGanador (Object ganador) {
+		String codigoBono = "BONO-" + id + "-" + System.currentTimeMillis();
+
+		if (ganador instanceof Socio) {
+			((Socio) ganador).agregarBono(new Bono(codigoBono, valorBono));
+		} else if (ganador instanceof Equipo) {
+			Equipo eq = (Equipo) ganador;
+			for (InscripcionEquipo ie : eq.getInscripciones()) {
+				if (ie.getSocio() != null) {
+					ie.getSocio().agregarBono(new Bono(codigoBono + "-" + System.nanoTime(), valorBono));
+				}
+			}
+		} else if (ganador instanceof InscripcionTorneo) {
+			InscripcionTorneo it = (InscripcionTorneo) ganador;
+			if (it.getUsuario() instanceof Socio) {
+				((Socio) it.getUsuario()).agregarBono(new Bono(codigoBono + "-A", valorBono));
+			}
+			if (it.getParejaUsuario() instanceof Socio) {
+				((Socio) it.getParejaUsuario()).agregarBono(new Bono(codigoBono + "-B", valorBono));
+			}
+		}
 	}
 
 	public abstract List<String> getTablaPosiciones();

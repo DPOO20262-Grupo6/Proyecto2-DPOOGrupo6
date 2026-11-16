@@ -3,10 +3,13 @@ package Torneos;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import deportesDeConjunto.Equipo;
 import deportesDeConjunto.PartidoTorneo;
 import deportesDeConjunto.ResultadoPartidoEquipo;
 import enumeraciones.EstadoTorneo;
+import enumeraciones.TipoCupoTorneo;
 import enumeraciones.TipoTorneo;
 
 public class TorneoEquipo extends Torneo {
@@ -15,32 +18,65 @@ public class TorneoEquipo extends Torneo {
 
 	private List<Equipo> equipos;
 	private List<PartidoTorneo> partidos;
+	private Map<Equipo, TipoCupoTorneo> tipoCupoPorEquipo;
 
 	public TorneoEquipo(String id, String nombre, String deporte, String categoria, int cuposTotales, TipoTorneo tipo, LocalDate fechaInicio, double tarifaInscripcion, double valorBono) throws Exception {
 		super(id, nombre, deporte, categoria, cuposTotales, tipo, fechaInicio, tarifaInscripcion, valorBono);
 		this.equipos = new ArrayList<Equipo>();
 		this.partidos = new ArrayList<PartidoTorneo>();
+		this.tipoCupoPorEquipo = new HashMap<Equipo, TipoCupoTorneo>();
 	}
 
 	// ---------------- Inscripcion (Integrante 2) ----------------
 
 	public boolean inscribir(Equipo equipo) {
-		if (equipo == null || getEstado() != EstadoTorneo.EN_CURSO || haIniciado()) {
+		try {
+			return inscribir(equipo, false);
+		} catch (RuntimeException e) {
 			return false;
 		}
-		if (estaInscrito(equipo) || cuposDisponibles() <= 0) {
-			return false;
+	}
+		
+		
+	public boolean inscribir(Equipo equipo, boolean tieneRanking) {	
+		if (equipo == null) {
+			throw new IllegalArgumentException("El equipo no puede estar vacio");
 		}
-		if (!equipo.getDeporte().equalsIgnoreCase(getDeporte())) {
-			return false;
+		if (getEstado() != EstadoTorneo.EN_CURSO) {
+			throw new IllegalStateException("El torneo no esta abierto para inscripciones.");
 		}
+		if (haIniciado()) {
+			throw new IllegalStateException("El torneo ya ha iniciado.");
+		}
+		if(estaInscrito(equipo)) {
+			throw new IllegalArgumentException("El equipo ya esta inscrito.");
+		}
+		if(!getDeporte().equalsIgnoreCase(equipo.getDeporte())) {
+			throw new IllegalArgumentException("El equipo no pertenece al deporte del torneo.");
+		}
+		
+		TipoCupoTorneo asignado;
+		if (tieneRanking && cuposPreferencialesDisponibles() > 0) {
+			asignado = TipoCupoTorneo.PREFERENCIAL;
+			cuposPreferencialesOcupados++;
+		} else if (cuposRegularesDisponibles() > 0) {
+			asignado = TipoCupoTorneo.REGULAR;
+		} else {
+			throw new IllegalStateException("No hay cupos disponibles para este equipo.");
+		}
+		
 		equipos.add(equipo);
+		tipoCupoPorEquipo.put(equipo,  asignado);
 		return true;
 	}
 
 	public boolean retirar(Equipo equipo) {
-		if (equipo == null || haIniciado()) {
+		if (equipo == null || haIniciado() || !estaInscrito(equipo)) {
 			return false;
+		}
+		TipoCupoTorneo tipoAsignado = tipoCupoPorEquipo.remove(equipo);
+		if (tipoAsignado == TipoCupoTorneo.PREFERENCIAL) {
+			cuposPreferencialesOcupados--;
 		}
 		return equipos.remove(equipo);
 	}
@@ -49,6 +85,9 @@ public class TorneoEquipo extends Torneo {
 		return equipo != null && equipos.contains(equipo);
 	}
 
+	public TipoCupoTorneo getTipoCupo(Equipo equipo) {
+		return tipoCupoPorEquipo.get(equipo);
+	}
 
 	public PartidoTorneo programarPartido(Equipo local, Equipo visitante, LocalDate fecha) {
 		if (getEstado() != EstadoTorneo.EN_CURSO) {

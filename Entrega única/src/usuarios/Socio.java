@@ -1,7 +1,12 @@
 package usuarios;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.ArrayList;
+import java.util.List;
+import articulosYVentas.Bono;
 import enumeraciones.NivelHabilidad;
 import inscripciones.InscripcionDisciplinaIndividual;
 
@@ -14,10 +19,44 @@ public class Socio extends Usuario {
 	private String documento;
 	private boolean dadoDeBaja;
 
+	private List<Bono> bonos;
+	
 	public Socio(String nombre, String login, String password, LocalDate fechaNacimiento) {
 		super(nombre, login, password);
 		this.fechaNacimiento = fechaNacimiento;
 		this.puntosDeFidelidad = 0;
+		this.bonos = new ArrayList<>();
+	}
+	
+	private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+		ois.defaultReadObject();
+		if (this.bonos == null) {
+			this.bonos = new ArrayList<>();
+		}
+	}
+	
+	public void agregarBono(Bono bono) {
+		if (bono != null) {
+			if(this.bonos == null) {
+				this.bonos = new ArrayList<>();
+
+			}
+			this.bonos.add(bono);
+		}
+	}
+	
+	public Bono obtenerBonoDisponible() {
+		if (bonos == null ) return null;
+		for (Bono bono : bonos) {
+			if (!bono.isUsado()) {
+				return bono;
+			}
+		}
+		return null;
+	}
+	
+	public List<Bono> getBonos() {
+		return bonos;
 	}
 
 	public Socio(String nombre, String documento, String login, String password, LocalDate fechaNacimiento) {
