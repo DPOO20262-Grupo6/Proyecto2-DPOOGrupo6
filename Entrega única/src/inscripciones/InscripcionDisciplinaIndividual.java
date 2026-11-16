@@ -10,7 +10,6 @@ import usuarios.Usuario;
 
 public class InscripcionDisciplinaIndividual implements Serializable {
 	
-	private static final long serialVersionUID = 1L;
 
 	public static final double ELO_INICIAL = 1000.0;
 	

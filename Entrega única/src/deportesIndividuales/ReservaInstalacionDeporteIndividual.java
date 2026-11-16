@@ -50,7 +50,6 @@ public class ReservaInstalacionDeporteIndividual implements Serializable {
 		this.motivoRechazo = motivo;
 	}
 
-	/** HU-S05 */
 	public void iniciarUso(Socio socio, boolean llevaBebidaCaliente) {
 		if (!"CONFIRMADA".equalsIgnoreCase(estado)) {
 			throw new IllegalStateException("La reserva no esta activa.");
