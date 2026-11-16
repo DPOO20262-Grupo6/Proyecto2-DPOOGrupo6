@@ -36,6 +36,7 @@ import enumeraciones.EstadoSolicitud;
 import enumeraciones.TipoTorneo;
 import inscripciones.InscripcionEquipo;
 import inventario.UbicacionInventario;
+import autenticacion.Autenticador;
 import persistencia.PersistenciaClub;
 import persistencia.PersistenciaException;
 import usuarios.Administrador;
@@ -82,7 +83,10 @@ public class ConsolaAdministrador {
 	}
 
 	public void ejecutar() {
-		iniciarSesion();
+		if (!iniciarSesion()) {
+			System.out.println("No se inicio sesion. La consola se cierra sin cambios.");
+			return;
+		}
 		boolean continuar = true;
 		while (continuar) {
 			System.out.println("===== Consola del Administrador =====");
@@ -118,27 +122,27 @@ public class ConsolaAdministrador {
 		}
 	}
 
-	private void iniciarSesion() {
+	/** Inicio de sesion con el limite de intentos de las otras consolas. Devuelve false si se agotan. */
+	private boolean iniciarSesion() {
 		System.out.println("===== Inicio de sesion - Administrador =====");
-		while (administrador == null) {
+		Autenticador autenticador = new Autenticador(club);
+		while (!autenticador.estaBloqueado()) {
 			System.out.print("Usuario: ");
 			String login = scanner.nextLine().trim();
 			System.out.print("Contrasena: ");
 			String password = scanner.nextLine().trim();
 
 			try {
-				Usuario usuario = club.autenticarUsuario(login, password);
-				if (usuario instanceof Administrador) {
-					administrador = (Administrador) usuario;
-					System.out.println("Bienvenido, " + administrador.getNombre() + ".");
-					System.out.println();
-				} else {
-					System.out.println("El usuario no tiene permisos de administrador. Intente de nuevo.");
-				}
+				administrador = autenticador.iniciarSesionAdministrador(login, password);
+				System.out.println("Bienvenido, " + administrador.getNombre() + ".");
+				System.out.println();
+				return true;
 			} catch (IllegalArgumentException e) {
-				System.out.println("Login o contrasena incorrectos. Intente de nuevo.");
+				System.out.println(e.getMessage() + " Intentos restantes: " + autenticador.getIntentosRestantes() + ".");
 			}
 		}
+		System.out.println("Se supero el maximo de " + Autenticador.MAXIMO_INTENTOS + " intentos.");
+		return false;
 	}
 
 	private String leerOpcion() {
