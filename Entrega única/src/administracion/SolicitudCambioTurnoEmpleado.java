@@ -14,6 +14,7 @@ public class SolicitudCambioTurnoEmpleado implements Serializable {
 	private LocalDate nuevaFecha;
 	private LocalTime nuevaHora;
 	private TurnoEmpleado turno;
+	private String motivoRechazo;
 
 	public SolicitudCambioTurnoEmpleado(TurnoEmpleado turno, LocalDate nuevaFecha, LocalTime nuevaHora) {
 		this.turno = turno;
@@ -30,6 +31,15 @@ public class SolicitudCambioTurnoEmpleado implements Serializable {
 
 	public void rechazar() {
 		this.estado = EstadoSolicitud.RECHAZADA;
+	}
+
+	public void rechazar(String motivo) {
+		this.estado = EstadoSolicitud.RECHAZADA;
+		this.motivoRechazo = motivo;
+	}
+
+	public String getMotivoRechazo() {
+		return motivoRechazo;
 	}
 
 	public EstadoSolicitud getEstado() {

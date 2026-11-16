@@ -31,6 +31,7 @@ import Torneos.TorneoEquipo;
 import Torneos.TorneoIndividual;
 import deportesDeConjunto.PartidoTorneo;
 import deportesIndividuales.PartidoDeporteIndividual;
+import enumeraciones.EstadoSolicitud;
 import enumeraciones.EstadoTorneo;
 import enumeraciones.Modalidad;
 import enumeraciones.TipoTorneo;
@@ -226,49 +227,92 @@ public class Administrador extends Usuario {
 	}
 
 	public TurnoEmpleado asignarTurno(EmpleadoDelClub empleado, LocalDate fecha, LocalTime hora, int duracion) {
+		if (club.tieneTurnoTraslapado(empleado, fecha, hora, duracion, club.getTurnos(), null)) {
+			throw new IllegalArgumentException("El empleado " + empleado.getNombre() + " ya tiene un turno en ese bloque (traslape).");
+		}
 		TurnoEmpleado turno = new TurnoEmpleado(empleado, fecha, hora, duracion);
 		club.getTurnos().add(turno);
 		return turno;
 	}
 
 	public void evaluarSolicitudCambio(SolicitudCambioTurnoEmpleado solicitud) {
+		if (solicitud.getEstado() != EstadoSolicitud.PENDIENTE) {
+			throw new IllegalStateException("La solicitud ya fue resuelta.");
+		}
 		TurnoEmpleado turno = solicitud.getTurno();
 		LocalDate fechaOriginal = turno.getFecha();
 		LocalTime horaOriginal = turno.getHora();
+		LocalTime finOriginal = turno.getHoraFin();
 
 		turno.reprogramar(solicitud.getNuevaFecha(), solicitud.getNuevaHora());
-		boolean cumple = club.verificarCoberturaMinima(fechaOriginal, horaOriginal);
+		String bloque = club.primerBloqueSinCobertura(fechaOriginal, horaOriginal, finOriginal, club.getTurnos());
 
-		if (cumple) {
+		if (bloque == null) {
 			solicitud.aprobar();
 		} else {
 			turno.reprogramar(fechaOriginal, horaOriginal);
-			solicitud.rechazar();
-			throw new IllegalStateException("No se puede aprobar el cambio porque incumple el minimo de 2 entrenadores y 1 fisioterapeuta");
+			String motivo = "No se puede aprobar el cambio porque incumple el minimo de 2 entrenadores y 1 fisioterapeuta en " + bloque;
+			solicitud.rechazar(motivo);
+			throw new IllegalStateException(motivo);
 		}
 	}
 
 	public void reabastecer(Articulo articulo, UbicacionInventario ubicacion, int cantidad) {
+		if (cantidad <= 0) {
+			throw new IllegalArgumentException("La cantidad debe ser mayor que cero.");
+		}
+		if (!club.existeProducto(articulo)) {
+			throw new IllegalArgumentException("El producto no existe.");
+		}
+		if (!club.esUbicacionDelClub(ubicacion)) {
+			throw new IllegalArgumentException("La ubicacion no existe.");
+		}
 		ubicacion.agregarExistencias(articulo, cantidad);
 	}
 
 	public void trasladarArticulo(Articulo articulo, UbicacionInventario origen, UbicacionInventario destino, int cantidad) {
+		if (cantidad <= 0) {
+			throw new IllegalArgumentException("La cantidad debe ser mayor que cero.");
+		}
+		if (!club.esUbicacionDelClub(origen) || !club.esUbicacionDelClub(destino)) {
+			throw new IllegalArgumentException("La ubicacion no existe.");
+		}
+		if (origen == destino) {
+			throw new IllegalArgumentException("El origen y el destino deben ser distintos.");
+		}
+		int disponible = origen.obtenerCantidad(articulo);
+		if (cantidad > disponible) {
+			throw new IllegalStateException("Existencia insuficiente: disponible en " + origen.getNombre() + " " + disponible + ".");
+		}
 		origen.retirarExistencias(articulo, cantidad);
 		destino.agregarExistencias(articulo, cantidad);
 	}
 
 	public void evaluarSugerencia(Sugerencia sugerencia, boolean aprobada) {
-		if (aprobada) {
-			sugerencia.aprobar();
-			Articulo nuevo = sugerencia.convertirEnArticulo();
-			if (nuevo instanceof ArticuloDeportivo) {
-				club.getTienda().agregarArticuloAlCatalogo((ArticuloDeportivo) nuevo);
-			} else {
-				club.getCafeteria().agregarProducto(nuevo);
-			}
-		} else {
-			sugerencia.rechazar();
+		evaluarSugerencia(sugerencia, aprobada, null);
+	}
+
+	public void evaluarSugerencia(Sugerencia sugerencia, boolean aprobada, String motivo) {
+		if (sugerencia.getEstado() != EstadoSolicitud.PENDIENTE) {
+			throw new IllegalStateException("La sugerencia ya fue resuelta.");
 		}
+		if (!aprobada) {
+			if (estaVacio(motivo)) {
+				throw new IllegalArgumentException("Debe indicar el motivo del rechazo.");
+			}
+			sugerencia.rechazar(motivo);
+			return;
+		}
+		Articulo nuevo = sugerencia.convertirEnArticulo();
+		if (nuevo instanceof ArticuloDeportivo) {
+			club.getTienda().agregarArticuloAlCatalogo((ArticuloDeportivo) nuevo);
+			club.getTienda().getUbicacionTienda().agregarExistencias(nuevo, 0);
+		} else {
+			club.getCafeteria().agregarProducto(nuevo);
+			club.getCafeteria().getInventario().agregarExistencias(nuevo, 0);
+		}
+		sugerencia.setArticuloCreado(nuevo);
+		sugerencia.aprobar();
 	}
 
 	public Torneo crearTorneo(String nombre, String deporte, String modalidad, String categoria, int cupos, TipoTorneo tipo, LocalDate fechaInicio, double tarifa, double bono) throws Exception {
