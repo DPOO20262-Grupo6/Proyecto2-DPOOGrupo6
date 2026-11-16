@@ -20,6 +20,7 @@ public abstract class PartidoDeporteIndividual implements Serializable {
 	private Modalidad modalidad;
 	private CanchaDeporteIndividual cancha;
 	private boolean intervieneEntrenador;
+	private ReservaInstalacionDeporteIndividual reserva;
 	
 	protected List<InscripcionDisciplinaIndividual> participantes;
 	protected List<EstadisticasPartidoIndividual> estadisticas; 
@@ -89,16 +90,38 @@ public abstract class PartidoDeporteIndividual implements Serializable {
 		}
 		
 		if (estadisticas.size() == participantes.size()) {
-			InscripcionDisciplinaIndividual j1 = participantes.get(0);
-			InscripcionDisciplinaIndividual j2 = participantes.get(1);
-			
-			EstadisticasPartidoIndividual e1 = estadisticas.get(0);
-			EstadisticasPartidoIndividual e2 = estadisticas.get(1);
-			
-			j1.actualizarRankingElo(j2.getRankingElo(), e1.esGanador());
-			j2.actualizarRankingElo(j1.getRankingElo(), e2.esGanador());
+			double[] eloRival = new double[participantes.size()];
+			for (int i = 0; i < participantes.size(); i++) {
+				double suma = 0;
+				int rivales = 0;
+				for (int j = 0; j < participantes.size(); j++) {
+					if (estadisticas.get(j).esGanador() != estadisticas.get(i).esGanador()) {
+						suma = suma + participantes.get(j).getRankingElo();
+						rivales = rivales + 1;
+					}
+				}
+				eloRival[i] = rivales > 0 ? suma / rivales : participantes.get(i).getRankingElo();
+			}
+			for (int i = 0; i < participantes.size(); i++) {
+				participantes.get(i).actualizarRankingElo(eloRival[i], estadisticas.get(i).esGanador());
+			}
 		}
 	}
+
+	public boolean tieneResultado() {
+		return !estadisticas.isEmpty();
+	}
+
+	public boolean seCruzaCon(LocalDate otraFecha, LocalTime otroInicio, LocalTime otroFin) {
+		return fecha.equals(otraFecha) && horaInicio.isBefore(otroFin) && otroInicio.isBefore(horaFin);
+	}
+
+	public int getSetsParaGanar() {
+		return 2;
+	}
+
+	public ReservaInstalacionDeporteIndividual getReserva() { return reserva; }
+	public void setReserva(ReservaInstalacionDeporteIndividual reserva) { this.reserva = reserva; }
 
 	public abstract EstadisticasPartidoIndividual crearEstadisticas();
 

@@ -19,6 +19,7 @@ public abstract class PartidoDeEquipo implements Serializable {
 	protected ResultadoPartidoEquipo resultado;
 	protected List<InscripcionEquipo> participantes;
 	protected List<EstadisticasPartidoDeEquipo> estadisticas;
+	private List<InscripcionEquipo> autoresEstadisticas;
 
 	public PartidoDeEquipo(LocalDate fecha, String deporte) {
 		this.fecha = fecha;
@@ -49,8 +50,29 @@ public abstract class PartidoDeEquipo implements Serializable {
 		if (deporte.equalsIgnoreCase("VOLEIBOL") && !(est instanceof EstadisticasPartidoVoleibol)) {
 			throw new IllegalArgumentException("Estadisticas no validas para voleibol.");
 		}
+		if (est.tieneValoresNegativos()) {
+			throw new IllegalArgumentException("Las estadisticas no pueden tener valores negativos.");
+		}
 		estadisticas.add(est);
+		getAutoresEstadisticas().add(inscripcion);
 		procesarTarjetasYSuspensiones(inscripcion, est);
+	}
+
+	private List<InscripcionEquipo> getAutoresEstadisticas() {
+		if (autoresEstadisticas == null) {
+			autoresEstadisticas = new ArrayList<InscripcionEquipo>();
+		}
+		return autoresEstadisticas;
+	}
+
+	public List<EstadisticasPartidoDeEquipo> getEstadisticasDe(InscripcionEquipo inscripcion) {
+		List<EstadisticasPartidoDeEquipo> resultadoJugador = new ArrayList<EstadisticasPartidoDeEquipo>();
+		for (int i = 0; i < getAutoresEstadisticas().size(); i++) {
+			if (getAutoresEstadisticas().get(i).equals(inscripcion)) {
+				resultadoJugador.add(estadisticas.get(i));
+			}
+		}
+		return resultadoJugador;
 	}
 
 	protected abstract void procesarTarjetasYSuspensiones(InscripcionEquipo inscripcion, EstadisticasPartidoDeEquipo est);
@@ -62,6 +84,7 @@ public abstract class PartidoDeEquipo implements Serializable {
 		if (!deporte.equalsIgnoreCase("FUTBOL") && resultado.esEmpate()) {
 			throw new IllegalArgumentException("Este deporte no permite empates.");
 		}
+		resultado.validar();
 		this.resultado = resultado;
 	}
 

@@ -59,6 +59,11 @@ public class EstadisticasPartidoFutbol extends EstadisticasPartidoDeEquipo {
 	public List<Tarjeta> getTarjetas() { return tarjetas; }
 
 	@Override
+	public boolean tieneValoresNegativos() {
+		return goles < 0 || asistencias < 0;
+	}
+
+	@Override
 	public String getResumen() {
 		return "Goles: " + goles + ", Asistencias: " + asistencias + ", Amarillas: " + getTarjetasAmarillas() + ", Rojas: " + getTarjetasRojas();
 	}

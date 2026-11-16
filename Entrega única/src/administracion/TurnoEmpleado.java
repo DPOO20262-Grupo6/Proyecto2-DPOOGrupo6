@@ -29,6 +29,14 @@ public class TurnoEmpleado implements Serializable {
 		return !otraHora.isBefore(this.hora) && otraHora.isBefore(fin);
 	}
 
+	public LocalTime getHoraFin() {
+		return hora.plusHours(duracion);
+	}
+
+	public boolean seTraslapaCon(LocalDate otraFecha, LocalTime otraHora, int otraDuracion) {
+		return fecha.equals(otraFecha) && hora.isBefore(otraHora.plusHours(otraDuracion)) && otraHora.isBefore(getHoraFin());
+	}
+
 	public void reprogramar(LocalDate nuevaFecha, LocalTime nuevaHora) {
 		this.fecha = nuevaFecha;
 		this.hora = nuevaHora;

@@ -11,11 +11,30 @@ public class Socio extends Usuario {
 
 	private LocalDate fechaNacimiento;
 	private int puntosDeFidelidad;
-	
+	private String documento;
+	private boolean dadoDeBaja;
+
 	public Socio(String nombre, String login, String password, LocalDate fechaNacimiento) {
 		super(nombre, login, password);
 		this.fechaNacimiento = fechaNacimiento;
 		this.puntosDeFidelidad = 0;
+	}
+
+	public Socio(String nombre, String documento, String login, String password, LocalDate fechaNacimiento) {
+		this(nombre, login, password, fechaNacimiento);
+		this.documento = documento;
+	}
+
+	public String getDocumento() {
+		return documento;
+	}
+
+	public boolean isActivo() {
+		return !dadoDeBaja;
+	}
+
+	public void darDeBaja() {
+		this.dadoDeBaja = true;
 	}
 
 	public InscripcionDisciplinaIndividual inscribirseDisciplina(String disciplina, NivelHabilidad nivel) {

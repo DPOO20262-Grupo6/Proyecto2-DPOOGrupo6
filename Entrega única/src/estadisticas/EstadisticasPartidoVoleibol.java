@@ -26,6 +26,11 @@ public class EstadisticasPartidoVoleibol extends EstadisticasPartidoDeEquipo {
 	public void setBloqueos(int bloqueos) { this.bloqueos = bloqueos; }
 
 	@Override
+	public boolean tieneValoresNegativos() {
+		return aces < 0 || bloqueos < 0;
+	}
+
+	@Override
 	public String getResumen() {
 		return "Aces: " + aces + ", Bloqueos: " + bloqueos;
 	}

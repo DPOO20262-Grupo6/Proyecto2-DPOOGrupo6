@@ -16,6 +16,11 @@ public class PartidoTenisDeMesa extends PartidoDeporteIndividual {
 	}
 
 	@Override
+	public int getSetsParaGanar() {
+		return 3;
+	}
+
+	@Override
 	public EstadisticasPartidoIndividual crearEstadisticas() {
 		return new EstadisticasPartidoTenisDeMesa();
 	}

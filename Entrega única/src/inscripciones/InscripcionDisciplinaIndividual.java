@@ -9,6 +9,8 @@ import usuarios.Socio;
 public class InscripcionDisciplinaIndividual implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
+
+	public static final double ELO_INICIAL = 1000.0;
 	
 	private String disciplina;
 	private NivelHabilidad nivel;
@@ -21,15 +23,7 @@ public class InscripcionDisciplinaIndividual implements Serializable {
 		this.disciplina = disciplina.toUpperCase();
 		this.nivel = nivel;
 		this.historialElo = new ArrayList<Double>();
-
-		if (nivel == NivelHabilidad.PRINCIPIANTE) {
-			this.rankingElo = 1000.0;
-		} else if (nivel == NivelHabilidad.INTERMEDIO) {
-			this.rankingElo = 1200.0;
-		} else {
-			this.rankingElo = 1400.0;
-		}
-		
+		this.rankingElo = ELO_INICIAL;
 		this.historialElo.add(this.rankingElo);
 	}
 

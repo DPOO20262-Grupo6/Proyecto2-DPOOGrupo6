@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import instalaciones.CanchaDeporteIndividual;
 import instalaciones.InstalacionDeportiva;
+import inventario.UbicacionInventario;
 
 public class Cafeteria implements Serializable {
 	
@@ -13,6 +14,7 @@ public class Cafeteria implements Serializable {
 	private List<Bebida> bebidas;
 	private List<Snack> snacks;
 	private List<VentaCafeteria> ventas;
+	private UbicacionInventario inventario;
 
 	public Cafeteria() {
 		this.bebidas = new ArrayList<Bebida>();
@@ -40,26 +42,51 @@ public class Cafeteria implements Serializable {
 		return info;
 	}
 
+	public UbicacionInventario getInventario() {
+		if (inventario == null) {
+			inventario = new UbicacionInventario("Cafeteria", "CAFETERIA");
+		}
+		return inventario;
+	}
+
+	public void reabastecer(Articulo producto, int cantidad) {
+		if (cantidad <= 0) {
+			throw new IllegalArgumentException("La cantidad debe ser mayor que cero.");
+		}
+		getInventario().agregarExistencias(producto, cantidad);
+	}
+
 	public void procesarVenta(VentaCafeteria venta, InstalacionDeportiva instalacionDelComprador) {
+		String prohibicion = null;
+		if (instalacionDelComprador instanceof CanchaDeporteIndividual && !((CanchaDeporteIndividual) instalacionDelComprador).permiteBebidaCaliente()) {
+			prohibicion = "No se permite despachar bebidas calientes en " + instalacionDelComprador.getNombre();
+		}
+		procesarVenta(venta, prohibicion, 0);
+	}
+
+	public void procesarVenta(VentaCafeteria venta, String prohibicionBebidaCaliente, double descuento) {
 		for (int i = 0; i < venta.getDetalles().size(); i++) {
 			DetalleVenta detalle = venta.getDetalles().get(i);
-			if (detalle.getArticulo() instanceof Bebida) {
-				Bebida bebida = (Bebida) detalle.getArticulo();
-				if (bebida.esCaliente() && instalacionDelComprador instanceof CanchaDeporteIndividual) {
-					CanchaDeporteIndividual canchaIndividual = (CanchaDeporteIndividual) instalacionDelComprador;
-					if (!canchaIndividual.permiteBebidaCaliente()) {
-						throw new IllegalStateException("No se permite despachar bebidas calientes en " + canchaIndividual.getNombre());
-					}
-				}
+			Articulo producto = detalle.getArticulo();
+			if (!bebidas.contains(producto) && !snacks.contains(producto)) {
+				throw new IllegalArgumentException("El producto " + producto.getNombre() + " no existe en la cafeteria.");
+			}
+			if (getInventario().obtenerCantidad(producto) < detalle.getCantidadArticulo()) {
+				throw new IllegalStateException("No hay existencia suficiente de " + producto.getNombre() + ".");
+			}
+			if (producto instanceof Snack && (((Snack) producto).getAlergenos() == null || ((Snack) producto).getAlergenos().isEmpty())) {
+				throw new IllegalStateException("El snack " + producto.getNombre() + " no tiene alergenos registrados.");
+			}
+			if (producto instanceof Bebida && ((Bebida) producto).esCaliente() && prohibicionBebidaCaliente != null) {
+				throw new IllegalStateException(prohibicionBebidaCaliente);
 			}
 		}
-		
-		venta.calcularTotal();
-		int generados = venta.calcularPuntosGenerados();
-		if (venta.getPuntosFidelidadUtilizados() > 0) {
-		    venta.getComprador().redimirPuntos(venta.getPuntosFidelidadUtilizados());
+		venta.aplicarDescuentoValidandoRedencion(descuento);
+		for (int i = 0; i < venta.getDetalles().size(); i++) {
+			DetalleVenta detalle = venta.getDetalles().get(i);
+			getInventario().retirarExistencias(detalle.getArticulo(), detalle.getCantidadArticulo());
 		}
-		venta.getComprador().acumularPuntos(generados);
+		venta.registrarPuntos();
 		ventas.add(venta);
 	}
 

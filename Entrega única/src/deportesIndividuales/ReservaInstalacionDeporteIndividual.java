@@ -22,6 +22,7 @@ public class ReservaInstalacionDeporteIndividual implements Serializable {
 	private String motivoRechazo;
 	private CanchaDeporteIndividual cancha;
 	private List<Socio> socios;
+	private boolean enUso;
 
 	public ReservaInstalacionDeporteIndividual(List<Socio> socios, CanchaDeporteIndividual cancha, LocalDate fecha, LocalTime horaInicio, LocalTime horaFin, int cantidadJugadores, Modalidad modalidad) {
 		this.socios = new ArrayList<Socio>();
@@ -47,6 +48,24 @@ public class ReservaInstalacionDeporteIndividual implements Serializable {
 	public void rechazar(String motivo) {
 		this.estado = "RECHAZADA";
 		this.motivoRechazo = motivo;
+	}
+
+	/** HU-S05 */
+	public void iniciarUso(Socio socio, boolean llevaBebidaCaliente) {
+		if (!"CONFIRMADA".equalsIgnoreCase(estado)) {
+			throw new IllegalStateException("La reserva no esta activa.");
+		}
+		if (!socios.contains(socio)) {
+			throw new IllegalArgumentException("La reserva no pertenece al socio.");
+		}
+		if (llevaBebidaCaliente && !cancha.permiteBebidaCaliente()) {
+			throw new IllegalStateException("No se permiten bebidas calientes en " + cancha.getNombre() + ".");
+		}
+		this.enUso = true;
+	}
+
+	public boolean isEnUso() {
+		return enUso;
 	}
 
 	public boolean seCruzaCon(LocalDate otraFecha, LocalTime otroInicio, LocalTime otroFin) {

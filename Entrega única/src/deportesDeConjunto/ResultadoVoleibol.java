@@ -51,6 +51,15 @@ public class ResultadoVoleibol extends ResultadoPartidoEquipo {
 	}
 
 	@Override
+	public void validar() {
+		int mayor = Math.max(getSetsGanadosLocal(), getSetsGanadosVisitante());
+		int menor = Math.min(getSetsGanadosLocal(), getSetsGanadosVisitante());
+		if (mayor != 3 || menor > 2) {
+			throw new IllegalArgumentException("El marcador de voleibol debe ser 3-0, 3-1 o 3-2.");
+		}
+	}
+
+	@Override
 	public boolean esEmpate() {
 		return getSetsGanadosLocal() == getSetsGanadosVisitante();
 	}

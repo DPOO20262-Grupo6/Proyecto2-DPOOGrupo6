@@ -15,6 +15,7 @@ public abstract class Equipo implements Serializable {
 	private String categoria;
 	private int cupoMaximoJugadores;
 	private List<InscripcionEquipo> inscripciones;
+	private boolean dadoDeBaja;
 
 	public Equipo(String nombre, String categoria, int cupoMaximoJugadores) {
 		this.nombre = nombre;
@@ -34,6 +35,17 @@ public abstract class Equipo implements Serializable {
 			throw new IllegalArgumentException("El numero de camiseta ya esta ocupado en el equipo.");
 		}
 		inscripciones.add(inscripcion);
+	}
+
+	public boolean isActivo() {
+		return !dadoDeBaja;
+	}
+
+	public void darDeBaja() {
+		this.dadoDeBaja = true;
+		for (int i = 0; i < inscripciones.size(); i++) {
+			inscripciones.get(i).setActiva(false);
+		}
 	}
 
 	public void retirarJugador(InscripcionEquipo inscripcion) {
@@ -78,7 +90,6 @@ public abstract class Equipo implements Serializable {
 		return contarJugadoresHabilitados() >= getMinimoJugadoresHabilitados();
 	}
 
-<<<<<<< HEAD
 	/**
 	 * Puntos de liga del equipo en los partidos dados. Futbol: 3 victoria, 1 empate, 0 derrota.
 	 * Baloncesto y voleibol: 2 victoria, 1 derrota.
@@ -102,8 +113,6 @@ public abstract class Equipo implements Serializable {
 		return puntos;
 	}
 
-=======
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 	public String getNombre() {
 		return nombre;
 	}

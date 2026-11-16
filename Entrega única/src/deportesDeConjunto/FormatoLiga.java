@@ -24,51 +24,22 @@ public class FormatoLiga implements Serializable {
 	}
 
 	public void actualizarTabla(PartidoDeCompetencia partido) {
-		NominaCompetencia nomina = competencia.buscarNomina(partido.getEquipoClub());
-		
-		if (nomina != null && partido.getResultado() != null) {
-			int pts = calcularPuntos(partido);
-			nomina.sumarPuntos(pts);
-			
-			if ("LOCAL".equals(partido.getResultado().getGanador())) {
-				nomina.registrarPartidoGanado();
-			}
-		}
-	}
-
-	private int calcularPuntos(PartidoDeCompetencia partido) {
-		String deporte = partido.getDeporte();
-		boolean ganoLocal = "LOCAL".equals(partido.getResultado().getGanador());
-		boolean esEmpate = partido.getResultado().esEmpate();
-		
-		if (deporte.equalsIgnoreCase("FUTBOL")) {
-			if (esEmpate) return 1;
-			if (ganoLocal) return 3;
-			return 0;
-		} else if (deporte.equalsIgnoreCase("BALONCESTO")) {
-			if (ganoLocal) return 2;
-			return 1;
-		} else if (deporte.equalsIgnoreCase("VOLEIBOL")) {
-			if (ganoLocal) return 2;
-			return 1;
-		}
-		return 0;
+		competencia.actualizarTabla(partido);
 	}
 
 	public List<NominaCompetencia> getTablaOrdenada() {
-		List<NominaCompetencia> ordenada = new ArrayList<NominaCompetencia>(competencia.getNominas());
-		
-		for (int i = 0; i < ordenada.size() - 1; i++) {
-			for (int j = i + 1; j < ordenada.size(); j++) {
-				NominaCompetencia n1 = ordenada.get(i);
-				NominaCompetencia n2 = ordenada.get(j);
-				if (n2.getPuntosAcumulados() > n1.getPuntosAcumulados()) {
-					ordenada.set(i, n2);
-					ordenada.set(j, n1);
-				}
+		return competencia.ordenarTabla(competencia.getNominas());
+	}
+
+	public List<NominaCompetencia> getTablaOrdenada(String grupo) {
+		List<NominaCompetencia> delGrupo = new ArrayList<NominaCompetencia>();
+		for (int i = 0; i < competencia.getNominas().size(); i++) {
+			NominaCompetencia nomina = competencia.getNominas().get(i);
+			if (grupo != null && grupo.equalsIgnoreCase(nomina.getGrupo())) {
+				delGrupo.add(nomina);
 			}
 		}
-		return ordenada;
+		return competencia.ordenarTabla(delGrupo);
 	}
 
 	public Competencia getCompetencia() {

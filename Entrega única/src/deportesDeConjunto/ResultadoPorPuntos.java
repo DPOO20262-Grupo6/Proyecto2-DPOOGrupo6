@@ -23,6 +23,13 @@ public class ResultadoPorPuntos extends ResultadoPartidoEquipo {
 	}
 
 	@Override
+	public void validar() {
+		if (puntosLocal < 0 || puntosVisitante < 0) {
+			throw new IllegalArgumentException("El marcador no puede ser negativo.");
+		}
+	}
+
+	@Override
 	public boolean esEmpate() {
 		return puntosLocal == puntosVisitante;
 	}

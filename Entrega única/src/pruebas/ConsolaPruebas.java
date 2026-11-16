@@ -154,6 +154,8 @@ public class ConsolaPruebas {
 		cuatroSocios.add(sociosA.get(1));
 		cuatroSocios.add(sociosA.get(2));
 		cuatroSocios.add(sociosA.get(3));
+		club.inscribirEnAcademia(sociosA.get(0), "PADEL", NivelHabilidad.INTERMEDIO);
+		club.inscribirEnAcademia(sociosB.get(0), "PADEL", NivelHabilidad.INTERMEDIO);
 
 		ReservaInstalacionDeporteIndividual reserva1 = club.reservarInstalacion(cuatroSocios, canchaPadel, LocalDate.now(), LocalTime.of(10, 0), LocalTime.of(11, 0), Modalidad.DOBLES);
 		System.out.println(reserva1.toString());
@@ -198,11 +200,14 @@ public class ConsolaPruebas {
 
 		SesionDeEntrenamiento sesion = entrenador1.planearSesion(LocalDate.now(), LocalTime.of(8, 0), 60, canchaTenis, dosSocios);
 		club.getSesiones().add(sesion);
-		entrenador1.registrarAsistencia(sesion, dosSocios.get(0), EstadoAsistencia.ASISTIO, 5, "Buen entrenamiento");
+		sesion.setFecha(LocalDate.now().minusDays(1));
+		entrenador1.registrarAsistencia(sesion, dosSocios.get(0), EstadoAsistencia.ASISTIO);
+		entrenador1.registrarEvaluacion(sesion, dosSocios.get(0), 5, "Buen entrenamiento");
 		System.out.println("Asistencia registrada: " + sesion.getAsistencias().get(0).toString());
 
 		try {
-			entrenador1.registrarAsistencia(sesion, dosSocios.get(1), EstadoAsistencia.ASISTIO, 10, "Nota invalida");
+			entrenador1.registrarAsistencia(sesion, dosSocios.get(1), EstadoAsistencia.ASISTIO);
+			entrenador1.registrarEvaluacion(sesion, dosSocios.get(1), 10, "Nota invalida");
 		} catch (Exception e) {
 			System.out.println("Error esperado: " + e.getMessage());
 		}
@@ -256,6 +261,9 @@ public class ConsolaPruebas {
 		club.getCafeteria().agregarProducto(cafe);
 		club.getCafeteria().agregarProducto(agua);
 		club.getCafeteria().agregarProducto(barraCereal);
+		club.getCafeteria().reabastecer(cafe, 10);
+		club.getCafeteria().reabastecer(agua, 10);
+		club.getCafeteria().reabastecer(barraCereal, 10);
 
 		List<Articulo> listaProductos = new ArrayList<Articulo>();
 		listaProductos.add(barraCereal);

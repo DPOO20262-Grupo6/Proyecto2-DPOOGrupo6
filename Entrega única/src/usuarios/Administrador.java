@@ -3,13 +3,18 @@ package usuarios;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.time.YearMonth;
+import administracion.PagoMensualidad;
 import administracion.SolicitudCambioTurnoEmpleado;
 import administracion.Sugerencia;
 import administracion.TurnoEmpleado;
 import articulosYVentas.Articulo;
 import articulosYVentas.ArticuloDeportivo;
 import club.ClubDeportivoSeneca;
+import deportesDeConjunto.Ascun;
 import deportesDeConjunto.Competencia;
+import deportesDeConjunto.PartidoDeCompetencia;
+import deportesDeConjunto.TorneoDeLosCerros;
 import deportesDeConjunto.Equipo;
 import deportesDeConjunto.EquipoBaloncesto;
 import deportesDeConjunto.EquipoFutbol;
@@ -21,18 +26,16 @@ import deportesDeConjunto.ResultadoPartidoEquipo;
 import inscripciones.InscripcionEquipo;
 import inscripciones.InscripcionEquipoFutbol;
 import inventario.UbicacionInventario;
-<<<<<<< HEAD
 import Torneos.Torneo;
 import Torneos.TorneoEquipo;
 import Torneos.TorneoIndividual;
 import deportesDeConjunto.PartidoTorneo;
 import deportesIndividuales.PartidoDeporteIndividual;
+import enumeraciones.EstadoSolicitud;
 import enumeraciones.EstadoTorneo;
 import enumeraciones.Modalidad;
 import enumeraciones.TipoTorneo;
 import estadisticas.EstadisticasPartidoIndividual;
-=======
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
 
 public class Administrador extends Usuario {
 	
@@ -45,7 +48,74 @@ public class Administrador extends Usuario {
 		this.club = club;
 	}
 
+
+	public Socio registrarSocio(String nombre, String documento, LocalDate fechaNacimiento, String login, String password) {
+		if (estaVacio(nombre)) {
+			throw new IllegalArgumentException("Falta el nombre del socio.");
+		}
+		if (estaVacio(documento)) {
+			throw new IllegalArgumentException("Falta el documento del socio.");
+		}
+		if (fechaNacimiento == null) {
+			throw new IllegalArgumentException("Falta la fecha de nacimiento del socio.");
+		}
+		if (estaVacio(login)) {
+			throw new IllegalArgumentException("Falta el login del socio.");
+		}
+		if (estaVacio(password)) {
+			throw new IllegalArgumentException("Falta la contrasena del socio.");
+		}
+		if (fechaNacimiento.isAfter(LocalDate.now())) {
+			throw new IllegalArgumentException("La fecha de nacimiento no puede ser futura.");
+		}
+		if (club.existeLogin(login)) {
+			throw new IllegalArgumentException("Ya existe un usuario con el login " + login + ".");
+		}
+		if (club.buscarSocioPorDocumento(documento) != null) {
+			throw new IllegalArgumentException("Ya existe un socio con el documento " + documento + ".");
+		}
+		Socio socio = new Socio(nombre, documento, login, password, fechaNacimiento);
+		club.registrarSocio(socio);
+		return socio;
+	}
+
+
+	public PagoMensualidad registrarPagoMensualidad(String loginSocio, YearMonth mes, double valor) {
+		Socio socio = club.buscarSocio(loginSocio);
+		if (socio == null) {
+			throw new IllegalArgumentException("No existe un socio con el login " + loginSocio + ".");
+		}
+		if (!socio.isActivo()) {
+			throw new IllegalArgumentException("El socio " + loginSocio + " no esta activo.");
+		}
+		if (mes == null) {
+			throw new IllegalArgumentException("Falta el mes de la mensualidad.");
+		}
+		if (valor <= 0) {
+			throw new IllegalArgumentException("El valor de la mensualidad debe ser mayor que cero.");
+		}
+		if (club.buscarPagoMensualidad(socio, mes) != null) {
+			throw new IllegalArgumentException("La mensualidad de " + mes + " ya fue pagada (pago duplicado).");
+		}
+		PagoMensualidad pago = new PagoMensualidad(socio, mes, valor);
+		club.agregarPagoMensualidad(pago);
+		return pago;
+	}
+
+	private boolean estaVacio(String texto) {
+		return texto == null || texto.trim().isEmpty();
+	}
+
 	public Equipo crearEquipo(String tipo, String nombre, String categoria, int cupo) {
+		if (estaVacio(tipo) || estaVacio(nombre) || estaVacio(categoria)) {
+			throw new IllegalArgumentException("Faltan datos del equipo: nombre, deporte y categoria son obligatorios.");
+		}
+		if (cupo <= 0) {
+			throw new IllegalArgumentException("El cupo maximo debe ser mayor que cero.");
+		}
+		if (club.buscarEquipoActivo(nombre, tipo, categoria) != null) {
+			throw new IllegalArgumentException("Ya existe el equipo " + nombre + " de " + tipo + " en la categoria " + categoria + ".");
+		}
 		Equipo eq = null;
 		if (tipo.equalsIgnoreCase("FUTBOL")) {
 			eq = new EquipoFutbol(nombre, categoria, cupo);
@@ -56,15 +126,36 @@ public class Administrador extends Usuario {
 		} else {
 			throw new IllegalArgumentException("Deporte no valido: " + tipo);
 		}
+		if (cupo < eq.getMinimoJugadoresHabilitados()) {
+			throw new IllegalArgumentException("El cupo es menor al minimo de " + eq.getMinimoJugadoresHabilitados() + " habilitados del deporte: el equipo nunca podria disputar un partido.");
+		}
 		club.agregarEquipo(eq);
 		return eq;
 	}
 
 	public void darDeBajaEquipo(Equipo equipo) {
-		club.getEquipos().remove(equipo);
+		if (!equipo.isActivo()) {
+			throw new IllegalArgumentException("El equipo " + equipo.getNombre() + " ya esta inactivo.");
+		}
+		int pendientes = club.contarPartidosPendientes(equipo);
+		if (pendientes > 0) {
+			throw new IllegalArgumentException("El equipo tiene " + pendientes + " partido(s) pendiente(s).");
+		}
+		Competencia competencia = club.buscarCompetenciaEnCursoDeEquipo(equipo);
+		if (competencia != null) {
+			throw new IllegalArgumentException("El equipo esta inscrito en la competencia en curso " + competencia.getNombre() + ".");
+		}
+		equipo.darDeBaja();
 	}
 
 	public InscripcionEquipo inscribirJugador(Equipo equipo, Socio socio, String posicion, int numeroCamiseta) {
+		if (!equipo.isActivo()) {
+			throw new IllegalArgumentException("El equipo " + equipo.getNombre() + " esta inactivo.");
+		}
+		Equipo actual = club.buscarEquipoActivoDeSocio(socio, equipo.getDeporte());
+		if (actual != null) {
+			throw new IllegalArgumentException("El socio ya pertenece al equipo " + actual.getNombre() + " del mismo deporte.");
+		}
 		InscripcionEquipo ie = null;
 		if (equipo instanceof EquipoFutbol) {
 			ie = new InscripcionEquipoFutbol(socio, equipo, posicion, numeroCamiseta);
@@ -76,11 +167,53 @@ public class Administrador extends Usuario {
 	}
 
 	public void darDeBajaJugador(Equipo equipo, InscripcionEquipo inscripcion) {
+		if (!equipo.getInscripciones().contains(inscripcion)) {
+			throw new IllegalArgumentException("El jugador ya fue dado de baja del equipo.");
+		}
+		Competencia competencia = club.buscarCompetenciaEnCursoDeJugador(inscripcion);
+		if (competencia != null) {
+			throw new IllegalArgumentException("El jugador esta en la nomina de la competencia en curso " + competencia.getNombre() + ".");
+		}
 		equipo.retirarJugador(inscripcion);
 	}
 
+	public Competencia registrarCompetencia(String nombre, String entidad, int temporada, String deporte, String categoria, String formato) {
+		if (estaVacio(nombre) || estaVacio(entidad) || estaVacio(deporte) || estaVacio(categoria) || estaVacio(formato) || temporada <= 0) {
+			throw new IllegalArgumentException("Falta un dato de la competencia: nombre, entidad, temporada, deporte, categoria y formato son obligatorios.");
+		}
+		int minimo;
+		if (deporte.equalsIgnoreCase("FUTBOL")) {
+			minimo = 7;
+		} else if (deporte.equalsIgnoreCase("BALONCESTO")) {
+			minimo = 5;
+		} else if (deporte.equalsIgnoreCase("VOLEIBOL")) {
+			minimo = 6;
+		} else {
+			throw new IllegalArgumentException("Deporte no valido: " + deporte);
+		}
+		if (club.buscarCompetencia(nombre, temporada) != null) {
+			throw new IllegalArgumentException("Ya existe la competencia " + nombre + " en la temporada " + temporada + ".");
+		}
+		Competencia competencia;
+		if (formato.equalsIgnoreCase("LIGA")) {
+			competencia = new TorneoDeLosCerros(nombre, entidad, temporada, deporte.toUpperCase(), categoria, minimo);
+		} else if (formato.equalsIgnoreCase("GRUPOS")) {
+			competencia = new Ascun(nombre, entidad, temporada, deporte.toUpperCase(), categoria, minimo);
+		} else {
+			throw new IllegalArgumentException("Formato invalido: " + formato + ". Use LIGA o GRUPOS.");
+		}
+		club.registrarCompetencia(competencia);
+		return competencia;
+	}
+
+	public PartidoDeCompetencia programarPartidoOficial(Competencia competencia, Equipo equipo, String rival, String escenario, LocalDate fecha, Entrenador entrenador) {
+		return competencia.programarPartidoOficial(equipo, rival, escenario, fecha, entrenador);
+	}
+
 	public NominaCompetencia inscribirEquipoEnCompetencia(Equipo equipo, Competencia competencia, List<InscripcionEquipo> jugadores) {
-		return competencia.inscribirEquipo(equipo, jugadores);
+		NominaCompetencia nomina = competencia.inscribirEquipo(equipo, jugadores);
+		club.registrarCompetencia(competencia);
+		return nomina;
 	}
 
 	public PartidoInterno programarPartidoInterno(Equipo local, Equipo visitante, LocalDate fecha) {
@@ -94,60 +227,94 @@ public class Administrador extends Usuario {
 	}
 
 	public TurnoEmpleado asignarTurno(EmpleadoDelClub empleado, LocalDate fecha, LocalTime hora, int duracion) {
+		if (club.tieneTurnoTraslapado(empleado, fecha, hora, duracion, club.getTurnos(), null)) {
+			throw new IllegalArgumentException("El empleado " + empleado.getNombre() + " ya tiene un turno en ese bloque (traslape).");
+		}
 		TurnoEmpleado turno = new TurnoEmpleado(empleado, fecha, hora, duracion);
 		club.getTurnos().add(turno);
 		return turno;
 	}
 
 	public void evaluarSolicitudCambio(SolicitudCambioTurnoEmpleado solicitud) {
+		if (solicitud.getEstado() != EstadoSolicitud.PENDIENTE) {
+			throw new IllegalStateException("La solicitud ya fue resuelta.");
+		}
 		TurnoEmpleado turno = solicitud.getTurno();
 		LocalDate fechaOriginal = turno.getFecha();
 		LocalTime horaOriginal = turno.getHora();
+		LocalTime finOriginal = turno.getHoraFin();
 
 		turno.reprogramar(solicitud.getNuevaFecha(), solicitud.getNuevaHora());
-		boolean cumple = club.verificarCoberturaMinima(fechaOriginal, horaOriginal);
+		String bloque = club.primerBloqueSinCobertura(fechaOriginal, horaOriginal, finOriginal, club.getTurnos());
 
-		if (cumple) {
+		if (bloque == null) {
 			solicitud.aprobar();
 		} else {
 			turno.reprogramar(fechaOriginal, horaOriginal);
-			solicitud.rechazar();
-			throw new IllegalStateException("No se puede aprobar el cambio porque incumple el minimo de 2 entrenadores y 1 fisioterapeuta");
+			String motivo = "No se puede aprobar el cambio porque incumple el minimo de 2 entrenadores y 1 fisioterapeuta en " + bloque;
+			solicitud.rechazar(motivo);
+			throw new IllegalStateException(motivo);
 		}
 	}
 
 	public void reabastecer(Articulo articulo, UbicacionInventario ubicacion, int cantidad) {
+		if (cantidad <= 0) {
+			throw new IllegalArgumentException("La cantidad debe ser mayor que cero.");
+		}
+		if (!club.existeProducto(articulo)) {
+			throw new IllegalArgumentException("El producto no existe.");
+		}
+		if (!club.esUbicacionDelClub(ubicacion)) {
+			throw new IllegalArgumentException("La ubicacion no existe.");
+		}
 		ubicacion.agregarExistencias(articulo, cantidad);
 	}
 
 	public void trasladarArticulo(Articulo articulo, UbicacionInventario origen, UbicacionInventario destino, int cantidad) {
+		if (cantidad <= 0) {
+			throw new IllegalArgumentException("La cantidad debe ser mayor que cero.");
+		}
+		if (!club.esUbicacionDelClub(origen) || !club.esUbicacionDelClub(destino)) {
+			throw new IllegalArgumentException("La ubicacion no existe.");
+		}
+		if (origen == destino) {
+			throw new IllegalArgumentException("El origen y el destino deben ser distintos.");
+		}
+		int disponible = origen.obtenerCantidad(articulo);
+		if (cantidad > disponible) {
+			throw new IllegalStateException("Existencia insuficiente: disponible en " + origen.getNombre() + " " + disponible + ".");
+		}
 		origen.retirarExistencias(articulo, cantidad);
 		destino.agregarExistencias(articulo, cantidad);
 	}
 
 	public void evaluarSugerencia(Sugerencia sugerencia, boolean aprobada) {
-		if (aprobada) {
-			sugerencia.aprobar();
-			Articulo nuevo = sugerencia.convertirEnArticulo();
-			if (nuevo instanceof ArticuloDeportivo) {
-				club.getTienda().agregarArticuloAlCatalogo((ArticuloDeportivo) nuevo);
-			} else {
-				club.getCafeteria().agregarProducto(nuevo);
-			}
-		} else {
-			sugerencia.rechazar();
-		}
+		evaluarSugerencia(sugerencia, aprobada, null);
 	}
-<<<<<<< HEAD
 
-	// ---------------- Torneos internos (HU-A01 a HU-A06) ----------------
+	public void evaluarSugerencia(Sugerencia sugerencia, boolean aprobada, String motivo) {
+		if (sugerencia.getEstado() != EstadoSolicitud.PENDIENTE) {
+			throw new IllegalStateException("La sugerencia ya fue resuelta.");
+		}
+		if (!aprobada) {
+			if (estaVacio(motivo)) {
+				throw new IllegalArgumentException("Debe indicar el motivo del rechazo.");
+			}
+			sugerencia.rechazar(motivo);
+			return;
+		}
+		Articulo nuevo = sugerencia.convertirEnArticulo();
+		if (nuevo instanceof ArticuloDeportivo) {
+			club.getTienda().agregarArticuloAlCatalogo((ArticuloDeportivo) nuevo);
+			club.getTienda().getUbicacionTienda().agregarExistencias(nuevo, 0);
+		} else {
+			club.getCafeteria().agregarProducto(nuevo);
+			club.getCafeteria().getInventario().agregarExistencias(nuevo, 0);
+		}
+		sugerencia.setArticuloCreado(nuevo);
+		sugerencia.aprobar();
+	}
 
-	/**
-	 * HU-A01. Deportes individuales (TENIS, PADEL, TENIS_DE_MESA) crean un TorneoIndividual;
-	 * deportes de conjunto (FUTBOL, BALONCESTO, VOLEIBOL) crean un TorneoEquipo y la modalidad se ignora.
-	 * La modalidad acepta INDIVIDUAL/SENCILLOS o DOBLES.
-	 * @throws Exception 
-	 */
 	public Torneo crearTorneo(String nombre, String deporte, String modalidad, String categoria, int cupos, TipoTorneo tipo, LocalDate fechaInicio, double tarifa, double bono) throws Exception {
 		if (deporte == null) {
 			throw new IllegalArgumentException("Debe indicar el deporte del torneo.");
@@ -198,22 +365,21 @@ public class Administrador extends Usuario {
 		return torneo;
 	}
 
-	/** HU-A02 */
+
 	public EstadoTorneo consultarEstadoTorneo(String id) {
 		return obtenerTorneo(id).getEstado();
 	}
 
-	/** HU-A03 */
 	public String consultarHistorialTorneo(String id) {
 		return obtenerTorneo(id).consultarHistorial();
 	}
 
-	/** HU-A05 */
+
 	public void finalizarTorneo(String id) {
 		obtenerTorneo(id).finalizar();
 	}
 
-	/** HU-A06 - torneo por equipos */
+
 	public void registrarResultadoTorneo(String id, PartidoTorneo partido, ResultadoPartidoEquipo resultado) {
 		Torneo torneo = obtenerTorneo(id);
 		if (!(torneo instanceof TorneoEquipo)) {
@@ -222,7 +388,7 @@ public class Administrador extends Usuario {
 		((TorneoEquipo) torneo).registrarResultado(partido, resultado);
 	}
 
-	/** HU-A06 - torneo individual: una estadistica por participante, en el orden del partido */
+
 	public void registrarResultadoTorneo(String id, PartidoDeporteIndividual partido, List<EstadisticasPartidoIndividual> resultado) {
 		Torneo torneo = obtenerTorneo(id);
 		if (!(torneo instanceof TorneoIndividual)) {
@@ -231,6 +397,3 @@ public class Administrador extends Usuario {
 		((TorneoIndividual) torneo).registrarResultado(partido, resultado);
 	}
 }
-=======
-}
->>>>>>> b7a39c6a05cdfcdb5f12948cbb15d9cf55a863fc
